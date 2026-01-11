@@ -49,9 +49,20 @@ interface Habit {
 }
 
 export default function HabitTracker() {
-  const [habits, setHabits] = useState<Habit[]>([
-    { id: 0, name: 'Daily Check-in App', colorIndex: 0 }
-  ]);
+  const [habits, setHabits] = useState<Habit[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('habits');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
+        }
+      }
+    }
+    return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
+  });
+  
   const [currentHabitIndex, setCurrentHabitIndex] = useState(0);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showAddHabitModal, setShowAddHabitModal] = useState(false);
@@ -62,6 +73,13 @@ export default function HabitTracker() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
+  
+  // Save habits to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('habits', JSON.stringify(habits));
+    }
+  }, [habits]);
   
   const currentHabit = habits[currentHabitIndex];
   const currentColor = HABIT_COLORS[currentHabit.colorIndex];
