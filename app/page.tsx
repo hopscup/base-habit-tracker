@@ -55,9 +55,9 @@ export default function HabitTracker() {
       if (saved) {
         try {
           return JSON.parse(saved);
-        } catch (e) {
-          return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
-        }
+        } catch {
+  return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
+}
       }
     }
     return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
@@ -638,7 +638,7 @@ function DayCell({
   dateTimestamp: number;
   onCheckIn: () => void;
   isPending: boolean;
-  currentColor: any;
+  currentColor: { bg: string; border: string; button: string; name: string };
   isConnected: boolean;
 }) {
   // Read from contract
