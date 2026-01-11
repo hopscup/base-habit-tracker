@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useAccount, useConnect, useDisconnect, useWriteContract } from 'wagmi';
+import { useState, useEffect } from 'react';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
 
@@ -16,6 +16,17 @@ const CONTRACT_ABI = [
     name: 'checkIn',
     outputs: [],
     stateMutability: 'payable',
+    type: 'function'
+  },
+  {
+    inputs: [
+      { name: 'user', type: 'address' },
+      { name: 'habitId', type: 'uint256' },
+      { name: 'date', type: 'uint256' }
+    ],
+    name: 'hasCheckedIn',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
     type: 'function'
   }
 ] as const;
@@ -42,9 +53,6 @@ export default function HabitTracker() {
     { id: 0, name: 'Daily Check-in App', colorIndex: 0 }
   ]);
   const [currentHabitIndex, setCurrentHabitIndex] = useState(0);
-  const [checkedDays, setCheckedDays] = useState<Record<number, Set<string>>>({
-    0: new Set()
-  });
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showAddHabitModal, setShowAddHabitModal] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
@@ -85,14 +93,6 @@ export default function HabitTracker() {
         value: parseEther('0.00001'),
         chainId: base.id
       });
-      
-      const key = `${day}`;
-      const newCheckedDays = { ...checkedDays };
-      if (!newCheckedDays[currentHabit.id]) {
-        newCheckedDays[currentHabit.id] = new Set();
-      }
-      newCheckedDays[currentHabit.id].add(key);
-      setCheckedDays(newCheckedDays);
     } catch (error) {
       console.error('Check-in error:', error);
       alert('Transaction failed! Check console for details.');
@@ -109,7 +109,6 @@ export default function HabitTracker() {
     };
     
     setHabits([...habits, newHabit]);
-    setCheckedDays({ ...checkedDays, [newHabit.id]: new Set() });
     setCurrentHabitIndex(habits.length);
     setShowAddHabitModal(false);
     setNewHabitName('');
@@ -570,35 +569,21 @@ export default function HabitTracker() {
             {getDaysArray().map(day => {
               const isToday = day === today.getDate();
               const isPast = new Date(currentYear, currentMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-              const habitChecked = checkedDays[currentHabit.id] || new Set();
-              const isChecked = habitChecked.has(`${day}`);
-              const canCheckIn = isToday && !isChecked && isConnected;
               
               return (
-                <div
+                <DayCell
                   key={day}
-                  className={`day-cell ${isToday ? 'today' : ''} ${isPast && !isChecked ? 'past' : ''}`}
-                  style={{
-                    background: isChecked ? currentColor.button : 'white',
-                    borderColor: isToday ? '#3b82f6' : '#e5e7eb',
-                    color: isChecked ? 'white' : '#1f2937'
-                  }}
-                >
-                  <div className="day-number">{day}</div>
-                  
-                  {canCheckIn && (
-                    <button
-                      onClick={() => handleCheckIn(day)}
-                      disabled={isPending}
-                      className="check-button"
-                      style={{ background: currentColor.button }}
-                    >
-                      {isPending ? '...' : 'Check-in'}
-                    </button>
-                  )}
-                  
-                  {isChecked && <div className="checkmark">✓</div>}
-                </div>
+                  day={day}
+                  isToday={isToday}
+                  isPast={isPast}
+                  habitId={currentHabit.id}
+                  address={address}
+                  dateTimestamp={getDateTimestamp(day)}
+                  onCheckIn={() => handleCheckIn(day)}
+                  isPending={isPending}
+                  currentColor={currentColor}
+                  isConnected={isConnected}
+                />
               );
             })}
           </div>
@@ -610,6 +595,70 @@ export default function HabitTracker() {
           <p>Contract: {CONTRACT_ADDRESS}</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Day Cell Component with contract reading
+function DayCell({ 
+  day, 
+  isToday, 
+  isPast, 
+  habitId, 
+  address, 
+  dateTimestamp,
+  onCheckIn,
+  isPending,
+  currentColor,
+  isConnected
+}: { 
+  day: number;
+  isToday: boolean;
+  isPast: boolean;
+  habitId: number;
+  address: string | undefined;
+  dateTimestamp: number;
+  onCheckIn: () => void;
+  isPending: boolean;
+  currentColor: any;
+  isConnected: boolean;
+}) {
+  // Read from contract
+  const { data: isChecked } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'hasCheckedIn',
+    args: address ? [address as `0x${string}`, BigInt(habitId), BigInt(dateTimestamp)] : undefined,
+    query: {
+      enabled: !!address
+    }
+  });
+
+  const canCheckIn = isToday && !isChecked && isConnected && !isPending;
+
+  return (
+    <div
+      className={`day-cell ${isToday ? 'today' : ''} ${isPast && !isChecked ? 'past' : ''}`}
+      style={{
+        background: isChecked ? currentColor.button : 'white',
+        borderColor: isToday ? '#3b82f6' : '#e5e7eb',
+        color: isChecked ? 'white' : '#1f2937'
+      }}
+    >
+      <div className="day-number">{day}</div>
+      
+      {canCheckIn && (
+        <button
+          onClick={onCheckIn}
+          disabled={isPending}
+          className="check-button"
+          style={{ background: currentColor.button }}
+        >
+          {isPending ? '...' : 'Check-in'}
+        </button>
+      )}
+      
+      {isChecked && <div className="checkmark">✓</div>}
     </div>
   );
 }
