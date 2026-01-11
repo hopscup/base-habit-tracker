@@ -361,7 +361,7 @@ export default function HabitTracker() {
                 textAlign: 'center',
                 lineHeight: '1.5'
               }}>
-                By connecting a wallet, you agree to Base's Terms of Service
+                By connecting a wallet, you agree to Base&apos;s Terms of Service
               </p>
             </div>
           </div>
