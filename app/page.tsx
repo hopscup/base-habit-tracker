@@ -622,7 +622,6 @@ export default function HabitTracker() {
             <HabitTab
               key={habit.id}
               habit={habit}
-              index={index}
               isActive={index === currentHabitIndex}
               isConnected={isConnected}
               currentColor={HABIT_COLORS[habit.colorIndex]}
