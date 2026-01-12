@@ -723,7 +723,6 @@ export default function HabitTracker() {
 
 function HabitTab({ 
   habit, 
-  index, 
   isActive, 
   isConnected, 
   currentColor, 
@@ -734,7 +733,6 @@ function HabitTab({
   setIsDropdownOpen
 }: {
   habit: Habit;
-  index: number;
   isActive: boolean;
   isConnected: boolean;
   currentColor: { bg: string; border: string; button: string; name: string };
