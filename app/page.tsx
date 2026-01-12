@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
@@ -90,28 +90,28 @@ export default function HabitTracker() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showAddHabitModal, setShowAddHabitModal] = useState(false);
   const [showEditHabitModal, setShowEditHabitModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
   const [editingHabitId, setEditingHabitId] = useState<number | null>(null);
+  const [deletingHabitId, setDeletingHabitId] = useState<number | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
   
-  // Load habits when wallet connects
   useEffect(() => {
     if (address) {
       const loadedHabits = loadHabitsForWallet(address);
       setHabits(loadedHabits);
       setCurrentHabitIndex(0);
     } else {
-      // Reset to default when disconnected
       setHabits([{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }]);
       setCurrentHabitIndex(0);
     }
   }, [address]);
   
-  // Save habits whenever they change (only if wallet connected)
   useEffect(() => {
     if (address && habits.length > 0) {
       saveHabitsForWallet(address, habits);
@@ -179,6 +179,7 @@ export default function HabitTracker() {
     setNewHabitName(habit.name);
     setSelectedColorIndex(habit.colorIndex);
     setShowEditHabitModal(true);
+    setOpenDropdownId(null);
   };
 
   const saveEditHabit = () => {
@@ -197,23 +198,28 @@ export default function HabitTracker() {
     setEditingHabitId(null);
   };
 
-  const deleteHabit = (habitId: number) => {
+  const confirmDeleteHabit = (habitId: number) => {
     if (habits.length === 1) {
       alert('You must have at least one habit!');
       return;
     }
+    setDeletingHabitId(habitId);
+    setShowDeleteConfirmModal(true);
+    setOpenDropdownId(null);
+  };
+
+  const deleteHabit = () => {
+    if (deletingHabitId === null) return;
     
-    if (!confirm('Are you sure you want to delete this habit?')) {
-      return;
-    }
-    
-    const filteredHabits = habits.filter(h => h.id !== habitId);
+    const filteredHabits = habits.filter(h => h.id !== deletingHabitId);
     setHabits(filteredHabits);
     
-    // Adjust current index if needed
     if (currentHabitIndex >= filteredHabits.length) {
       setCurrentHabitIndex(filteredHabits.length - 1);
     }
+    
+    setShowDeleteConfirmModal(false);
+    setDeletingHabitId(null);
   };
 
   const getDaysArray = () => {
@@ -468,275 +474,107 @@ export default function HabitTracker() {
 
         {/* Add Habit Modal */}
         {showAddHabitModal && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.8)',
-              backdropFilter: 'blur(8px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}
-            onClick={() => {
+          <Modal
+            title="Add New Habit"
+            description="Create a new habit to track daily"
+            onClose={() => {
               setShowAddHabitModal(false);
               setNewHabitName('');
               setSelectedColorIndex(0);
             }}
           >
-            <div
-              style={{
-                background: 'white',
-                borderRadius: '24px',
-                padding: '40px',
-                maxWidth: '440px',
-                width: '90%',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            <HabitForm
+              habitName={newHabitName}
+              setHabitName={setNewHabitName}
+              selectedColorIndex={selectedColorIndex}
+              setSelectedColorIndex={setSelectedColorIndex}
+              onSubmit={addNewHabit}
+              onCancel={() => {
+                setShowAddHabitModal(false);
+                setNewHabitName('');
+                setSelectedColorIndex(0);
               }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#1f2937', marginBottom: '8px' }}>
-                  Add New Habit
-                </h3>
-                <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
-                  Create a new habit to track daily
-                </p>
-              </div>
-
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-                  Habit Name
-                </label>
-                <input
-                  type="text"
-                  value={newHabitName}
-                  onChange={(e) => setNewHabitName(e.target.value)}
-                  placeholder="e.g., Morning Exercise, Read 30 min"
-                  onKeyPress={(e) => e.key === 'Enter' && addNewHabit()}
-                  autoFocus
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '12px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.2s'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#0052FF'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
-                />
-              </div>
-
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>
-                  Choose Color
-                </label>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(4, 1fr)', 
-                  gap: '12px' 
-                }}>
-                  {HABIT_COLORS.map((color, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedColorIndex(index)}
-                      style={{
-                        padding: '16px',
-                        background: color.bg,
-                        border: selectedColorIndex === index ? `3px solid ${color.button}` : '2px solid #e5e7eb',
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '8px',
-                        transition: 'all 0.2s',
-                        transform: selectedColorIndex === index ? 'scale(1.05)' : 'scale(1)'
-                      }}
-                    >
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        background: color.button,
-                        borderRadius: '8px'
-                      }} />
-                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280' }}>
-                        {color.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={() => {
-                    setShowAddHabitModal(false);
-                    setNewHabitName('');
-                    setSelectedColorIndex(0);
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '14px',
-                    background: '#f3f4f6',
-                    color: '#6b7280',
-                    border: 'none',
-                    borderRadius: '12px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.background = '#e5e7eb'}
-                  onMouseOut={(e) => e.currentTarget.style.background = '#f3f4f6'}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={addNewHabit}
-                  disabled={!newHabitName.trim()}
-                  style={{
-                    flex: 1,
-                    padding: '14px',
-                    background: newHabitName.trim() ? HABIT_COLORS[selectedColorIndex].button : '#9ca3af',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '12px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: newHabitName.trim() ? 'pointer' : 'not-allowed',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  Add Habit
-                </button>
-              </div>
-            </div>
-          </div>
+              submitLabel="Add Habit"
+            />
+          </Modal>
         )}
 
         {/* Edit Habit Modal */}
         {showEditHabitModal && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.8)',
-              backdropFilter: 'blur(8px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}
-            onClick={() => {
+          <Modal
+            title="Edit Habit"
+            description="Update your habit details"
+            onClose={() => {
               setShowEditHabitModal(false);
               setNewHabitName('');
               setSelectedColorIndex(0);
               setEditingHabitId(null);
             }}
           >
+            <HabitForm
+              habitName={newHabitName}
+              setHabitName={setNewHabitName}
+              selectedColorIndex={selectedColorIndex}
+              setSelectedColorIndex={setSelectedColorIndex}
+              onSubmit={saveEditHabit}
+              onCancel={() => {
+                setShowEditHabitModal(false);
+                setNewHabitName('');
+                setSelectedColorIndex(0);
+                setEditingHabitId(null);
+              }}
+              submitLabel="Save Changes"
+            />
+          </Modal>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirmModal && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.8)',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}
+            onClick={() => {
+              setShowDeleteConfirmModal(false);
+              setDeletingHabitId(null);
+            }}
+          >
             <div
               style={{
                 background: 'white',
                 borderRadius: '24px',
                 padding: '40px',
-                maxWidth: '440px',
+                maxWidth: '400px',
                 width: '90%',
                 boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ marginBottom: '24px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗑️</div>
                 <h3 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#1f2937', marginBottom: '8px' }}>
-                  Edit Habit
+                  Delete Habit?
                 </h3>
                 <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
-                  Update your habit details
+                  Are you sure you want to delete this habit? This action cannot be undone.
                 </p>
-              </div>
-
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-                  Habit Name
-                </label>
-                <input
-                  type="text"
-                  value={newHabitName}
-                  onChange={(e) => setNewHabitName(e.target.value)}
-                  placeholder="e.g., Morning Exercise, Read 30 min"
-                  onKeyPress={(e) => e.key === 'Enter' && saveEditHabit()}
-                  autoFocus
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '12px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.2s'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#0052FF'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
-                />
-              </div>
-
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>
-                  Choose Color
-                </label>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(4, 1fr)', 
-                  gap: '12px' 
-                }}>
-                  {HABIT_COLORS.map((color, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedColorIndex(index)}
-                      style={{
-                        padding: '16px',
-                        background: color.bg,
-                        border: selectedColorIndex === index ? `3px solid ${color.button}` : '2px solid #e5e7eb',
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '8px',
-                        transition: 'all 0.2s',
-                        transform: selectedColorIndex === index ? 'scale(1.05)' : 'scale(1)'
-                      }}
-                    >
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        background: color.button,
-                        borderRadius: '8px'
-                      }} />
-                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280' }}>
-                        {color.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
                   onClick={() => {
-                    setShowEditHabitModal(false);
-                    setNewHabitName('');
-                    setSelectedColorIndex(0);
-                    setEditingHabitId(null);
+                    setShowDeleteConfirmModal(false);
+                    setDeletingHabitId(null);
                   }}
                   style={{
                     flex: 1,
@@ -756,103 +594,70 @@ export default function HabitTracker() {
                   Cancel
                 </button>
                 <button
-                  onClick={saveEditHabit}
-                  disabled={!newHabitName.trim()}
+                  onClick={deleteHabit}
                   style={{
                     flex: 1,
                     padding: '14px',
-                    background: newHabitName.trim() ? HABIT_COLORS[selectedColorIndex].button : '#9ca3af',
+                    background: '#ef4444',
                     color: 'white',
                     border: 'none',
                     borderRadius: '12px',
                     fontSize: '16px',
                     fontWeight: '600',
-                    cursor: newHabitName.trim() ? 'pointer' : 'not-allowed',
+                    cursor: 'pointer',
                     transition: 'all 0.2s'
                   }}
+                  onMouseOver={(e) => e.currentTarget.style.background = '#dc2626'}
+                  onMouseOut={(e) => e.currentTarget.style.background = '#ef4444'}
                 >
-                  Save Changes
+                  Delete
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        <div className="habit-tabs">
+        <div className="habit-tabs" style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
           {habits.map((habit, index) => (
-            <div key={habit.id} style={{ position: 'relative', display: 'inline-block' }}>
-              <button
-                onClick={() => setCurrentHabitIndex(index)}
-                className={`habit-tab ${index === currentHabitIndex ? 'active' : ''}`}
-                style={{
-                  background: index === currentHabitIndex ? HABIT_COLORS[habit.colorIndex].button : 'white',
-                  color: index === currentHabitIndex ? 'white' : '#374151',
-                  borderColor: index === currentHabitIndex ? HABIT_COLORS[habit.colorIndex].button : '#d1d5db',
-                  paddingRight: '48px'
-                }}
-              >
-                {habit.name}
-              </button>
-              
-              {isConnected && (
-                <div style={{ 
-                  position: 'absolute', 
-                  right: '8px', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)',
-                  display: 'flex',
-                  gap: '4px'
-                }}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditHabit(habit);
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      padding: '4px',
-                      opacity: 0.6,
-                      transition: 'opacity 0.2s'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-                    onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
-                    title="Edit habit"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteHabit(habit.id);
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      padding: '4px',
-                      opacity: 0.6,
-                      transition: 'opacity 0.2s'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-                    onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
-                    title="Delete habit"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              )}
-            </div>
+            <HabitTab
+              key={habit.id}
+              habit={habit}
+              index={index}
+              isActive={index === currentHabitIndex}
+              isConnected={isConnected}
+              currentColor={HABIT_COLORS[habit.colorIndex]}
+              onClick={() => setCurrentHabitIndex(index)}
+              onEdit={() => openEditHabit(habit)}
+              onDelete={() => confirmDeleteHabit(habit.id)}
+              isDropdownOpen={openDropdownId === habit.id}
+              setIsDropdownOpen={(isOpen) => setOpenDropdownId(isOpen ? habit.id : null)}
+            />
           ))}
           
           {isConnected && (
             <button 
               onClick={() => setShowAddHabitModal(true)}
               className="habit-tab"
-              style={{ borderStyle: 'dashed' }}
+              style={{ 
+                borderStyle: 'dashed',
+                padding: '12px 24px',
+                background: 'white',
+                border: '2px dashed #d1d5db',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                fontSize: '15px',
+                fontWeight: '600',
+                color: '#6b7280',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.borderColor = '#0052FF';
+                e.currentTarget.style.color = '#0052FF';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.borderColor = '#d1d5db';
+                e.currentTarget.style.color = '#6b7280';
+              }}
             >
               + Add Habit
             </button>
@@ -913,6 +718,352 @@ export default function HabitTracker() {
         </div>
       </div>
     </div>
+  );
+}
+
+function HabitTab({ 
+  habit, 
+  index, 
+  isActive, 
+  isConnected, 
+  currentColor, 
+  onClick, 
+  onEdit, 
+  onDelete,
+  isDropdownOpen,
+  setIsDropdownOpen
+}: {
+  habit: Habit;
+  index: number;
+  isActive: boolean;
+  isConnected: boolean;
+  currentColor: { bg: string; border: string; button: string; name: string };
+  onClick: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  isDropdownOpen: boolean;
+  setIsDropdownOpen: (isOpen: boolean) => void;
+}) {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen, setIsDropdownOpen]);
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }} ref={dropdownRef}>
+      <button
+        onClick={onClick}
+        style={{
+          padding: '12px 24px',
+          paddingRight: isConnected ? '44px' : '24px',
+          background: isActive ? currentColor.button : 'white',
+          color: isActive ? 'white' : '#374151',
+          border: `2px solid ${isActive ? currentColor.button : '#d1d5db'}`,
+          borderRadius: '12px',
+          cursor: 'pointer',
+          fontSize: '15px',
+          fontWeight: '600',
+          transition: 'all 0.2s',
+          position: 'relative'
+        }}
+      >
+        {habit.name}
+      </button>
+      
+      {isConnected && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDropdownOpen(!isDropdownOpen);
+            }}
+            style={{
+              position: 'absolute',
+              right: '8px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '18px',
+              padding: '4px 8px',
+              color: isActive ? 'white' : '#6b7280',
+              opacity: 0.7,
+              transition: 'opacity 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}
+          >
+            ⋮
+          </button>
+
+          {isDropdownOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: '0',
+                background: 'white',
+                border: '2px solid #e5e7eb',
+                borderRadius: '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                zIndex: 100,
+                minWidth: '160px',
+                overflow: 'hidden'
+              }}
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  background: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#374151',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+              >
+                <span style={{ fontSize: '16px' }}>✏️</span>
+                Edit
+              </button>
+              <div style={{ height: '1px', background: '#e5e7eb' }} />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  background: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#ef4444',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#fef2f2'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+              >
+                <span style={{ fontSize: '16px' }}>🗑️</span>
+                Delete
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function Modal({ 
+  title, 
+  description, 
+  children, 
+  onClose 
+}: { 
+  title: string;
+  description: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.8)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'white',
+          borderRadius: '24px',
+          padding: '40px',
+          maxWidth: '440px',
+          width: '90%',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#1f2937', marginBottom: '8px' }}>
+            {title}
+          </h3>
+          <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
+            {description}
+          </p>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function HabitForm({
+  habitName,
+  setHabitName,
+  selectedColorIndex,
+  setSelectedColorIndex,
+  onSubmit,
+  onCancel,
+  submitLabel
+}: {
+  habitName: string;
+  setHabitName: (name: string) => void;
+  selectedColorIndex: number;
+  setSelectedColorIndex: (index: number) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  submitLabel: string;
+}) {
+  return (
+    <>
+      <div style={{ marginBottom: '24px' }}>
+        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+          Habit Name
+        </label>
+        <input
+          type="text"
+          value={habitName}
+          onChange={(e) => setHabitName(e.target.value)}
+          placeholder="e.g., Morning Exercise, Read 30 min"
+          onKeyPress={(e) => e.key === 'Enter' && onSubmit()}
+          autoFocus
+          style={{
+            width: '100%',
+            padding: '14px',
+            border: '2px solid #e5e7eb',
+            borderRadius: '12px',
+            fontSize: '16px',
+            outline: 'none',
+            transition: 'border-color 0.2s'
+          }}
+          onFocus={(e) => e.currentTarget.style.borderColor = '#0052FF'}
+          onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+        />
+      </div>
+
+      <div style={{ marginBottom: '32px' }}>
+        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>
+          Choose Color
+        </label>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(4, 1fr)', 
+          gap: '12px' 
+        }}>
+          {HABIT_COLORS.map((color, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedColorIndex(index)}
+              style={{
+                padding: '16px',
+                background: color.bg,
+                border: selectedColorIndex === index ? `3px solid ${color.button}` : '2px solid #e5e7eb',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+                transform: selectedColorIndex === index ? 'scale(1.05)' : 'scale(1)'
+              }}
+            >
+              <div style={{
+                width: '32px',
+                height: '32px',
+                background: color.button,
+                borderRadius: '8px'
+              }} />
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280' }}>
+                {color.name}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <button
+          onClick={onCancel}
+          style={{
+            flex: 1,
+            padding: '14px',
+            background: '#f3f4f6',
+            color: '#6b7280',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.background = '#e5e7eb'}
+          onMouseOut={(e) => e.currentTarget.style.background = '#f3f4f6'}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onSubmit}
+          disabled={!habitName.trim()}
+          style={{
+            flex: 1,
+            padding: '14px',
+            background: habitName.trim() ? HABIT_COLORS[selectedColorIndex].button : '#9ca3af',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: habitName.trim() ? 'pointer' : 'not-allowed',
+            transition: 'all 0.2s'
+          }}
+        >
+          {submitLabel}
+        </button>
+      </div>
+    </>
   );
 }
 
