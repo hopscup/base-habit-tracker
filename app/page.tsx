@@ -48,38 +48,75 @@ interface Habit {
   colorIndex: number;
 }
 
-export default function HabitTracker() {
-  const [habits, setHabits] = useState<Habit[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('habits');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-  return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
-}
-      }
-    }
+// Helper functions for wallet-bound storage
+const getStorageKey = (address: string | undefined) => {
+  if (!address) return null;
+  return `habits_${address.toLowerCase()}`;
+};
+
+const loadHabitsForWallet = (address: string | undefined): Habit[] => {
+  if (typeof window === 'undefined' || !address) {
     return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
-  });
+  }
   
+  const key = getStorageKey(address);
+  if (!key) return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
+  
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
+    }
+  }
+  return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
+};
+
+const saveHabitsForWallet = (address: string | undefined, habits: Habit[]) => {
+  if (typeof window === 'undefined' || !address) return;
+  
+  const key = getStorageKey(address);
+  if (!key) return;
+  
+  localStorage.setItem(key, JSON.stringify(habits));
+};
+
+export default function HabitTracker() {
+  const { address, isConnected } = useAccount();
+  
+  const [habits, setHabits] = useState<Habit[]>([{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }]);
   const [currentHabitIndex, setCurrentHabitIndex] = useState(0);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showAddHabitModal, setShowAddHabitModal] = useState(false);
+  const [showEditHabitModal, setShowEditHabitModal] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
+  const [editingHabitId, setEditingHabitId] = useState<number | null>(null);
   
-  const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
   
-  // Save habits to localStorage whenever they change
+  // Load habits when wallet connects
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('habits', JSON.stringify(habits));
+    if (address) {
+      const loadedHabits = loadHabitsForWallet(address);
+      setHabits(loadedHabits);
+      setCurrentHabitIndex(0);
+    } else {
+      // Reset to default when disconnected
+      setHabits([{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }]);
+      setCurrentHabitIndex(0);
     }
-  }, [habits]);
+  }, [address]);
+  
+  // Save habits whenever they change (only if wallet connected)
+  useEffect(() => {
+    if (address && habits.length > 0) {
+      saveHabitsForWallet(address, habits);
+    }
+  }, [habits, address]);
   
   const currentHabit = habits[currentHabitIndex];
   const currentColor = HABIT_COLORS[currentHabit.colorIndex];
@@ -119,6 +156,10 @@ export default function HabitTracker() {
 
   const addNewHabit = () => {
     if (!newHabitName.trim()) return;
+    if (!isConnected) {
+      alert('Please connect your wallet to add habits!');
+      return;
+    }
     
     const newHabit: Habit = {
       id: habits.length,
@@ -131,6 +172,48 @@ export default function HabitTracker() {
     setShowAddHabitModal(false);
     setNewHabitName('');
     setSelectedColorIndex(0);
+  };
+
+  const openEditHabit = (habit: Habit) => {
+    setEditingHabitId(habit.id);
+    setNewHabitName(habit.name);
+    setSelectedColorIndex(habit.colorIndex);
+    setShowEditHabitModal(true);
+  };
+
+  const saveEditHabit = () => {
+    if (!newHabitName.trim() || editingHabitId === null) return;
+    
+    const updatedHabits = habits.map(h => 
+      h.id === editingHabitId 
+        ? { ...h, name: newHabitName.trim(), colorIndex: selectedColorIndex }
+        : h
+    );
+    
+    setHabits(updatedHabits);
+    setShowEditHabitModal(false);
+    setNewHabitName('');
+    setSelectedColorIndex(0);
+    setEditingHabitId(null);
+  };
+
+  const deleteHabit = (habitId: number) => {
+    if (habits.length === 1) {
+      alert('You must have at least one habit!');
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to delete this habit?')) {
+      return;
+    }
+    
+    const filteredHabits = habits.filter(h => h.id !== habitId);
+    setHabits(filteredHabits);
+    
+    // Adjust current index if needed
+    if (currentHabitIndex >= filteredHabits.length) {
+      setCurrentHabitIndex(filteredHabits.length - 1);
+    }
   };
 
   const getDaysArray = () => {
@@ -171,7 +254,6 @@ export default function HabitTracker() {
           <p>Track your daily habits on-chain</p>
         </div>
 
-        {/* Wallet Connection Button */}
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'flex-end' }}>
           {!isConnected ? (
             <button
@@ -539,30 +621,242 @@ export default function HabitTracker() {
           </div>
         )}
 
-        {/* Habit Tabs */}
+        {/* Edit Habit Modal */}
+        {showEditHabitModal && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.8)',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}
+            onClick={() => {
+              setShowEditHabitModal(false);
+              setNewHabitName('');
+              setSelectedColorIndex(0);
+              setEditingHabitId(null);
+            }}
+          >
+            <div
+              style={{
+                background: 'white',
+                borderRadius: '24px',
+                padding: '40px',
+                maxWidth: '440px',
+                width: '90%',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#1f2937', marginBottom: '8px' }}>
+                  Edit Habit
+                </h3>
+                <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
+                  Update your habit details
+                </p>
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                  Habit Name
+                </label>
+                <input
+                  type="text"
+                  value={newHabitName}
+                  onChange={(e) => setNewHabitName(e.target.value)}
+                  placeholder="e.g., Morning Exercise, Read 30 min"
+                  onKeyPress={(e) => e.key === 'Enter' && saveEditHabit()}
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#0052FF'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                />
+              </div>
+
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>
+                  Choose Color
+                </label>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(4, 1fr)', 
+                  gap: '12px' 
+                }}>
+                  {HABIT_COLORS.map((color, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedColorIndex(index)}
+                      style={{
+                        padding: '16px',
+                        background: color.bg,
+                        border: selectedColorIndex === index ? `3px solid ${color.button}` : '2px solid #e5e7eb',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s',
+                        transform: selectedColorIndex === index ? 'scale(1.05)' : 'scale(1)'
+                      }}
+                    >
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        background: color.button,
+                        borderRadius: '8px'
+                      }} />
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280' }}>
+                        {color.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => {
+                    setShowEditHabitModal(false);
+                    setNewHabitName('');
+                    setSelectedColorIndex(0);
+                    setEditingHabitId(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    background: '#f3f4f6',
+                    color: '#6b7280',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = '#e5e7eb'}
+                  onMouseOut={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveEditHabit}
+                  disabled={!newHabitName.trim()}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    background: newHabitName.trim() ? HABIT_COLORS[selectedColorIndex].button : '#9ca3af',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: newHabitName.trim() ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="habit-tabs">
           {habits.map((habit, index) => (
-            <button
-              key={habit.id}
-              onClick={() => setCurrentHabitIndex(index)}
-              className={`habit-tab ${index === currentHabitIndex ? 'active' : ''}`}
-              style={{
-                background: index === currentHabitIndex ? HABIT_COLORS[habit.colorIndex].button : 'white',
-                color: index === currentHabitIndex ? 'white' : '#374151',
-                borderColor: index === currentHabitIndex ? HABIT_COLORS[habit.colorIndex].button : '#d1d5db'
-              }}
-            >
-              {habit.name}
-            </button>
+            <div key={habit.id} style={{ position: 'relative', display: 'inline-block' }}>
+              <button
+                onClick={() => setCurrentHabitIndex(index)}
+                className={`habit-tab ${index === currentHabitIndex ? 'active' : ''}`}
+                style={{
+                  background: index === currentHabitIndex ? HABIT_COLORS[habit.colorIndex].button : 'white',
+                  color: index === currentHabitIndex ? 'white' : '#374151',
+                  borderColor: index === currentHabitIndex ? HABIT_COLORS[habit.colorIndex].button : '#d1d5db',
+                  paddingRight: '48px'
+                }}
+              >
+                {habit.name}
+              </button>
+              
+              {isConnected && (
+                <div style={{ 
+                  position: 'absolute', 
+                  right: '8px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)',
+                  display: 'flex',
+                  gap: '4px'
+                }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditHabit(habit);
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      padding: '4px',
+                      opacity: 0.6,
+                      transition: 'opacity 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                    onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+                    title="Edit habit"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteHabit(habit.id);
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      padding: '4px',
+                      opacity: 0.6,
+                      transition: 'opacity 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                    onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+                    title="Delete habit"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
           
-          <button 
-            onClick={() => setShowAddHabitModal(true)}
-            className="habit-tab"
-            style={{ borderStyle: 'dashed' }}
-          >
-            + Add Habit
-          </button>
+          {isConnected && (
+            <button 
+              onClick={() => setShowAddHabitModal(true)}
+              className="habit-tab"
+              style={{ borderStyle: 'dashed' }}
+            >
+              + Add Habit
+            </button>
+          )}
         </div>
 
         <div 
@@ -611,13 +905,17 @@ export default function HabitTracker() {
           <p><strong>{isConnected ? 'Ready to check-in!' : 'Connect wallet to start'}</strong></p>
           <p>Each check-in costs 0.00001 ETH (~1 cent)</p>
           <p>Contract: {CONTRACT_ADDRESS}</p>
+          {isConnected && (
+            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
+              💾 Your habits are saved to your wallet: {address?.slice(0, 8)}...{address?.slice(-6)}
+            </p>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// Day Cell Component with contract reading
 function DayCell({ 
   day, 
   isToday, 
@@ -641,7 +939,6 @@ function DayCell({
   currentColor: { bg: string; border: string; button: string; name: string };
   isConnected: boolean;
 }) {
-  // Read from contract
   const { data: isChecked } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
