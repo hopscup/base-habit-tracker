@@ -765,7 +765,7 @@ function HabitTab({
         onClick={onClick}
         style={{
           padding: '12px 24px',
-          paddingRight: isConnected ? '44px' : '24px',
+          paddingRight: isConnected ? '48px' : '24px',
           background: isActive ? currentColor.button : 'white',
           color: isActive ? 'white' : '#374151',
           border: `2px solid ${isActive ? currentColor.button : '#d1d5db'}`,
@@ -792,17 +792,26 @@ function HabitTab({
               right: '8px',
               top: '50%',
               transform: 'translateY(-50%)',
-              background: 'transparent',
+              background: isActive ? 'rgba(255,255,255,0.2)' : '#f3f4f6',
               border: 'none',
               cursor: 'pointer',
               fontSize: '18px',
-              padding: '4px 8px',
+              padding: '6px 8px',
+              borderRadius: '6px',
               color: isActive ? 'white' : '#6b7280',
-              opacity: 0.7,
-              transition: 'opacity 0.2s'
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold',
+              lineHeight: '1'
             }}
-            onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-            onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = isActive ? 'rgba(255,255,255,0.3)' : '#e5e7eb';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = isActive ? 'rgba(255,255,255,0.2)' : '#f3f4f6';
+            }}
           >
             ⋮
           </button>
@@ -815,11 +824,12 @@ function HabitTab({
                 right: '0',
                 background: 'white',
                 border: '2px solid #e5e7eb',
-                borderRadius: '12px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                borderRadius: '16px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
                 zIndex: 100,
-                minWidth: '160px',
-                overflow: 'hidden'
+                padding: '12px',
+                display: 'flex',
+                gap: '8px'
               }}
             >
               <button
@@ -828,52 +838,57 @@ function HabitTab({
                   onEdit();
                 }}
                 style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: 'white',
+                  background: '#f3f4f6',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  textAlign: 'left',
+                  fontSize: '24px',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  transition: 'all 0.2s',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
-                  transition: 'background 0.2s'
+                  justifyContent: 'center'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.background = '#f3f4f6'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = '#e5e7eb';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = '#f3f4f6';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Edit habit"
               >
-                <span style={{ fontSize: '16px' }}>✏️</span>
-                Edit
+                ✏️
               </button>
-              <div style={{ height: '1px', background: '#e5e7eb' }} />
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete();
                 }}
                 style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: 'white',
+                  background: '#fee2e2',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#ef4444',
-                  textAlign: 'left',
+                  fontSize: '24px',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  transition: 'all 0.2s',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
-                  transition: 'background 0.2s'
+                  justifyContent: 'center'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.background = '#fef2f2'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = '#fecaca';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = '#fee2e2';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Delete habit"
               >
-                <span style={{ fontSize: '16px' }}>🗑️</span>
-                Delete
+                🗑️
               </button>
             </div>
           )}
