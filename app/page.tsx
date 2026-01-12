@@ -617,7 +617,7 @@ export default function HabitTracker() {
           </div>
         )}
 
-        <div className="habit-tabs" style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <div className="habit-tabs" style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', overflow: 'visible' }}>
           {habits.map((habit, index) => (
             <HabitTab
               key={habit.id}
@@ -774,7 +774,8 @@ function HabitTab({
           fontSize: '15px',
           fontWeight: '600',
           transition: 'all 0.2s',
-          position: 'relative'
+          position: 'relative',
+          overflow: 'visible'
         }}
       >
         {habit.name}
@@ -826,7 +827,7 @@ function HabitTab({
                 border: '2px solid #e5e7eb',
                 borderRadius: '16px',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                zIndex: 100,
+                zIndex: 999,
                 padding: '12px',
                 display: 'flex',
                 gap: '8px'
