@@ -102,6 +102,10 @@ export default function HabitTracker() {
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   
+  // Transaction and achievement states
+  const [txStatus, setTxStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [txMessage, setTxMessage] = useState('');
+  
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
@@ -169,6 +173,9 @@ export default function HabitTracker() {
     }
 
     try {
+      setTxStatus('pending');
+      setTxMessage('Processing transaction...');
+      
       const dateTimestamp = getDateTimestamp(day);
       
       await writeContract({
@@ -179,9 +186,26 @@ export default function HabitTracker() {
         value: parseEther('0.00001'),
         chainId: base.id
       });
+      
+      setTxStatus('success');
+      setTxMessage('✅ Check-in successful!');
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setTxStatus('idle');
+        setTxMessage('');
+      }, 3000);
+      
     } catch (error) {
       console.error('Check-in error:', error);
-      alert('Transaction failed! Check console for details.');
+      setTxStatus('error');
+      setTxMessage('❌ Transaction failed. Please try again.');
+      
+      // Hide error message after 5 seconds
+      setTimeout(() => {
+        setTxStatus('idle');
+        setTxMessage('');
+      }, 5000);
     }
   };
 
@@ -667,6 +691,66 @@ export default function HabitTracker() {
             </div>
           </div>
         )}
+
+        {/* Transaction Status Notification */}
+        {txStatus !== 'idle' && (
+          <div
+            style={{
+              position: 'fixed',
+              top: '24px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 1000,
+              padding: '16px 24px',
+              background: txStatus === 'pending' ? '#f3f4f6' : txStatus === 'success' ? '#dcfce7' : '#fee2e2',
+              border: `2px solid ${txStatus === 'pending' ? '#d1d5db' : txStatus === 'success' ? '#86efac' : '#fca5a5'}`,
+              borderRadius: '12px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              maxWidth: '90%',
+              animation: 'slideDown 0.3s ease-out'
+            }}
+          >
+            {txStatus === 'pending' && (
+              <div style={{
+                width: '20px',
+                height: '20px',
+                border: '3px solid #d1d5db',
+                borderTop: '3px solid #6b7280',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+            )}
+            <span style={{ 
+              fontWeight: '600', 
+              color: txStatus === 'pending' ? '#374151' : txStatus === 'success' ? '#166534' : '#991b1b',
+              fontSize: '15px'
+            }}>
+              {txMessage}
+            </span>
+          </div>
+        )}
+
+        <style jsx>{`
+          @keyframes slideDown {
+            from {
+              opacity: 0;
+              transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(-50%) translateY(0);
+            }
+          }
+          
+          @keyframes spin {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}</style>
 
         <div className="habit-tabs" style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', overflow: 'visible' }}>
           {habits.map((habit, index) => (
@@ -1296,55 +1380,107 @@ function MonthStats({
   const percentage = 0;
   const currentStreak = 0;
   
+  // Calculate achievements
+  const achievements = [];
+  if (currentStreak >= 7) achievements.push({ icon: '🔥', name: '7 Day Streak!', color: '#f97316' });
+  if (currentStreak >= 30) achievements.push({ icon: '⭐', name: '30 Day Legend!', color: '#eab308' });
+  if (percentage === 100) achievements.push({ icon: '💯', name: 'Perfect Month!', color: '#22c55e' });
+  if (totalChecked >= 100) achievements.push({ icon: '🏆', name: '100 Check-ins!', color: '#a855f7' });
+  
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
-      gap: '12px',
-      marginBottom: '20px'
-    }}>
+    <>
       <div style={{
-        padding: '16px',
-        background: currentColor.bg,
-        borderRadius: '12px',
-        textAlign: 'center'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
+        gap: '12px',
+        marginBottom: '20px'
       }}>
-        <div style={{ fontSize: '24px', fontWeight: '700', color: currentColor.button }}>
-          {totalChecked}
+        <div style={{
+          padding: '16px',
+          background: currentColor.bg,
+          borderRadius: '12px',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '24px', fontWeight: '700', color: currentColor.button }}>
+            {totalChecked}
+          </div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+            Check-ins
+          </div>
         </div>
-        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-          Check-ins
+        
+        <div style={{
+          padding: '16px',
+          background: currentColor.bg,
+          borderRadius: '12px',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '24px', fontWeight: '700', color: currentColor.button }}>
+            {percentage}%
+          </div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+            Completion
+          </div>
+        </div>
+        
+        <div style={{
+          padding: '16px',
+          background: currentColor.bg,
+          borderRadius: '12px',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '24px', fontWeight: '700', color: currentColor.button }}>
+            {currentStreak} 🔥
+          </div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+            Day Streak
+          </div>
         </div>
       </div>
       
-      <div style={{
-        padding: '16px',
-        background: currentColor.bg,
-        borderRadius: '12px',
-        textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '24px', fontWeight: '700', color: currentColor.button }}>
-          {percentage}%
+      {achievements.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+          border: '2px solid #fcd34d',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '20px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '8px',
+          alignItems: 'center'
+        }}>
+          <span style={{ 
+            fontSize: '14px', 
+            fontWeight: '700', 
+            color: '#78350f',
+            marginRight: '8px'
+          }}>
+            🎉 Achievements:
+          </span>
+          {achievements.map((achievement, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                background: 'white',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: achievement.color,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>{achievement.icon}</span>
+              {achievement.name}
+            </div>
+          ))}
         </div>
-        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-          Completion
-        </div>
-      </div>
-      
-      <div style={{
-        padding: '16px',
-        background: currentColor.bg,
-        borderRadius: '12px',
-        textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '24px', fontWeight: '700', color: currentColor.button }}>
-          {currentStreak} 🔥
-        </div>
-        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-          Day Streak
-        </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 }
 
