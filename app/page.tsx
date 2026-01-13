@@ -1214,11 +1214,11 @@ function HabitForm({
 }
 
 function MonthStats({
-  habitId,
-  address,
-  year,
-  month,
-  daysInMonth,
+  habitId: _habitId,
+  address: _address,
+  year: _year,
+  month: _month,
+  daysInMonth: _daysInMonth,
   currentColor
 }: {
   habitId: number;
