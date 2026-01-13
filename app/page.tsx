@@ -1384,7 +1384,7 @@ function MonthStats({
   const achievements = [];
   if (currentStreak >= 7) achievements.push({ icon: '🔥', name: '7 Day Streak!', color: '#f97316' });
   if (currentStreak >= 30) achievements.push({ icon: '⭐', name: '30 Day Legend!', color: '#eab308' });
-  if (percentage === 100) achievements.push({ icon: '💯', name: 'Perfect Month!', color: '#22c55e' });
+  if (percentage >= 100) achievements.push({ icon: '💯', name: 'Perfect Month!', color: '#22c55e' });
   if (totalChecked >= 100) achievements.push({ icon: '🏆', name: '100 Check-ins!', color: '#a855f7' });
   
   return (
