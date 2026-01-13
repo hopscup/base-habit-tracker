@@ -8,8 +8,8 @@ import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: minikitConfig.miniapp.name,
-    description: minikitConfig.miniapp.description,
+    title: "Base Habit Tracker",
+    description: "Track your daily habits on-chain with Base",
     other: {
       "fc:frame": JSON.stringify({
         version: minikitConfig.miniapp.version,
