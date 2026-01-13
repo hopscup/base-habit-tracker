@@ -5,7 +5,7 @@ import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContrac
 import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
 
-const CONTRACT_ADDRESS = '0x2d0c8CcF8524B7ffAdB78389CcdB75C875631F09';
+const CONTRACT_ADDRESS = '0x9a4eaaBd5d204932E1e4d9EC0fa718Dc77B3360e';
 
 const CONTRACT_ABI = [
   {
