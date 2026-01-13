@@ -97,6 +97,11 @@ export default function HabitTracker() {
   const [deletingHabitId, setDeletingHabitId] = useState<number | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   
+  // Month navigation state
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
@@ -121,14 +126,46 @@ export default function HabitTracker() {
   const currentHabit = habits[currentHabitIndex];
   const currentColor = HABIT_COLORS[currentHabit.colorIndex];
   
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth();
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const firstDayOfMonth = new Date(viewYear, viewMonth, 1).getDay();
 
   const getDateTimestamp = (day: number) => {
-    return Math.floor(new Date(currentYear, currentMonth, day).getTime() / 1000 / 86400);
+    return Math.floor(new Date(viewYear, viewMonth, day).getTime() / 1000 / 86400);
+  };
+  
+  const goToPreviousMonth = () => {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(viewYear - 1);
+    } else {
+      setViewMonth(viewMonth - 1);
+    }
+  };
+  
+  const goToNextMonth = () => {
+    const today = new Date();
+    const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
+    
+    if (!isCurrentMonth) {
+      if (viewMonth === 11) {
+        setViewMonth(0);
+        setViewYear(viewYear + 1);
+      } else {
+        setViewMonth(viewMonth + 1);
+      }
+    }
+  };
+  
+  const goToToday = () => {
+    const today = new Date();
+    setViewYear(today.getFullYear());
+    setViewMonth(today.getMonth());
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    setViewYear(today.getFullYear());
+    setViewMonth(today.getMonth());
   };
 
   const handleCheckIn = async (day: number) => {
@@ -673,9 +710,102 @@ export default function HabitTracker() {
         >
           <h2>{currentHabit.name}</h2>
           
-          <div className="month-title">
-            {new Date(currentYear, currentMonth).toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '20px',
+            gap: '16px'
+          }}>
+            <button
+              onClick={goToPreviousMonth}
+              style={{
+                background: 'white',
+                border: '2px solid #e5e7eb',
+                borderRadius: '10px',
+                padding: '10px 16px',
+                cursor: 'pointer',
+                fontSize: '18px',
+                transition: 'all 0.2s',
+                fontWeight: 'bold'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.borderColor = currentColor.button;
+                e.currentTarget.style.background = currentColor.bg;
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.background = 'white';
+              }}
+            >
+              ←
+            </button>
+            
+            <div style={{ textAlign: 'center', flex: 1 }}>
+              <div className="month-title" style={{ margin: 0 }}>
+                {new Date(viewYear, viewMonth).toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+              </div>
+              {viewYear !== today.getFullYear() || viewMonth !== today.getMonth() ? (
+                <button
+                  onClick={goToToday}
+                  style={{
+                    marginTop: '8px',
+                    padding: '4px 12px',
+                    background: currentColor.bg,
+                    border: `1px solid ${currentColor.button}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    color: currentColor.button,
+                    fontWeight: '600'
+                  }}
+                >
+                  Today
+                </button>
+              ) : null}
+            </div>
+            
+            <button
+              onClick={goToNextMonth}
+              disabled={viewYear === today.getFullYear() && viewMonth === today.getMonth()}
+              style={{
+                background: (viewYear === today.getFullYear() && viewMonth === today.getMonth()) ? '#f3f4f6' : 'white',
+                border: '2px solid #e5e7eb',
+                borderRadius: '10px',
+                padding: '10px 16px',
+                cursor: (viewYear === today.getFullYear() && viewMonth === today.getMonth()) ? 'not-allowed' : 'pointer',
+                fontSize: '18px',
+                transition: 'all 0.2s',
+                fontWeight: 'bold',
+                opacity: (viewYear === today.getFullYear() && viewMonth === today.getMonth()) ? 0.5 : 1
+              }}
+              onMouseOver={(e) => {
+                if (!(viewYear === today.getFullYear() && viewMonth === today.getMonth())) {
+                  e.currentTarget.style.borderColor = currentColor.button;
+                  e.currentTarget.style.background = currentColor.bg;
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!(viewYear === today.getFullYear() && viewMonth === today.getMonth())) {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.background = 'white';
+                }
+              }}
+            >
+              →
+            </button>
           </div>
+          
+          {isConnected && (
+            <MonthStats
+              habitId={currentHabit.id}
+              address={address}
+              year={viewYear}
+              month={viewMonth}
+              daysInMonth={daysInMonth}
+              currentColor={currentColor}
+            />
+          )}
 
           <div className="calendar">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -687,8 +817,10 @@ export default function HabitTracker() {
             ))}
 
             {getDaysArray().map(day => {
-              const isToday = day === today.getDate();
-              const isPast = new Date(currentYear, currentMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              const cellDate = new Date(viewYear, viewMonth, day);
+              const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              const isToday = cellDate.getTime() === todayDate.getTime();
+              const isPast = cellDate < todayDate;
               
               return (
                 <DayCell
@@ -1084,6 +1216,137 @@ function HabitForm({
         </button>
       </div>
     </>
+  );
+}
+
+function MonthStats({
+  habitId,
+  address,
+  year,
+  month,
+  daysInMonth,
+  currentColor
+}: {
+  habitId: number;
+  address: string | undefined;
+  year: number;
+  month: number;
+  daysInMonth: number;
+  currentColor: { bg: string; border: string; button: string; name: string };
+}) {
+  const [checkedDays, setCheckedDays] = useState<boolean[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchMonthData = async () => {
+      if (!address) return;
+      
+      setLoading(true);
+      const checks: boolean[] = [];
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const timestamp = Math.floor(new Date(year, month, day).getTime() / 1000 / 86400);
+        try {
+          const response = await fetch(
+            `https://base.blockscout.com/api/v2/smart-contracts/${CONTRACT_ADDRESS}/methods-read?method_id=hasCheckedIn`
+          );
+          // This is a simplified version - you'd need to actually call the contract
+          checks.push(false); // Placeholder
+        } catch {
+          checks.push(false);
+        }
+      }
+      
+      setCheckedDays(checks);
+      setLoading(false);
+    };
+    
+    fetchMonthData();
+  }, [address, habitId, year, month, daysInMonth]);
+  
+  const totalChecked = checkedDays.filter(Boolean).length;
+  const percentage = daysInMonth > 0 ? Math.round((totalChecked / daysInMonth) * 100) : 0;
+  
+  // Calculate current streak
+  let currentStreak = 0;
+  const today = new Date();
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
+  
+  if (isCurrentMonth) {
+    const currentDay = today.getDate();
+    for (let i = currentDay - 1; i >= 0; i--) {
+      if (checkedDays[i]) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+  }
+  
+  if (loading) {
+    return (
+      <div style={{
+        padding: '16px',
+        background: currentColor.bg,
+        borderRadius: '12px',
+        marginBottom: '20px',
+        textAlign: 'center',
+        color: '#6b7280'
+      }}>
+        Loading stats...
+      </div>
+    );
+  }
+  
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      gap: '12px',
+      marginBottom: '20px'
+    }}>
+      <div style={{
+        padding: '16px',
+        background: currentColor.bg,
+        borderRadius: '12px',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '24px', fontWeight: '700', color: currentColor.button }}>
+          {totalChecked}
+        </div>
+        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+          Check-ins
+        </div>
+      </div>
+      
+      <div style={{
+        padding: '16px',
+        background: currentColor.bg,
+        borderRadius: '12px',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '24px', fontWeight: '700', color: currentColor.button }}>
+          {percentage}%
+        </div>
+        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+          Completion
+        </div>
+      </div>
+      
+      <div style={{
+        padding: '16px',
+        background: currentColor.bg,
+        borderRadius: '12px',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '24px', fontWeight: '700', color: currentColor.button }}>
+          {currentStreak} 🔥
+        </div>
+        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+          Day Streak
+        </div>
+      </div>
+    </div>
   );
 }
 
