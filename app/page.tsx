@@ -255,68 +255,72 @@ export default function HabitTracker() {
   return (
     <div style={{ minHeight: '100vh', background: currentColor.bg, padding: '24px', transition: 'background 0.3s' }}>
       <div className="container">
-        <div className="header">
-          <h1>Base Habit Tracker</h1>
-          <p>Track your daily habits on-chain</p>
-        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <div className="header" style={{ margin: 0 }}>
+            <h1 style={{ margin: 0, marginBottom: '4px' }}>Base Habit Tracker</h1>
+            <p style={{ margin: 0 }}>Track your daily habits on-chain</p>
+          </div>
 
-        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-          {!isConnected ? (
-            <button
-              onClick={() => setShowWalletModal(true)}
-              style={{
-                padding: '12px 24px',
-                background: '#0052FF',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '16px',
-                boxShadow: '0 2px 8px rgba(0,82,255,0.3)',
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.background = '#0041CC'}
-              onMouseOut={(e) => e.currentTarget.style.background = '#0052FF'}
-            >
-              Connect Wallet
-            </button>
-          ) : (
-            <div style={{
-              padding: '12px 20px',
-              background: 'white',
-              border: '2px solid #0052FF',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div style={{
-                width: '8px',
-                height: '8px',
-                background: '#22c55e',
-                borderRadius: '50%'
-              }} />
-              <span style={{ fontWeight: '600', color: '#1f2937' }}>
-                {address?.slice(0, 6)}...{address?.slice(-4)}
-              </span>
+          <div>
+            {!isConnected ? (
               <button
-                onClick={() => disconnect()}
+                onClick={() => setShowWalletModal(true)}
                 style={{
-                  padding: '6px 12px',
-                  background: '#f3f4f6',
-                  color: '#6b7280',
+                  padding: '12px 24px',
+                  background: '#0052FF',
+                  color: 'white',
                   border: 'none',
-                  borderRadius: '6px',
+                  borderRadius: '12px',
                   cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500'
+                  fontWeight: '600',
+                  fontSize: '16px',
+                  boxShadow: '0 2px 8px rgba(0,82,255,0.3)',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap'
                 }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#0041CC'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#0052FF'}
               >
-                Disconnect
+                Connect Wallet
               </button>
-            </div>
-          )}
+            ) : (
+              <div style={{
+                padding: '12px 20px',
+                background: 'white',
+                border: '2px solid #0052FF',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                whiteSpace: 'nowrap'
+              }}>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  background: '#22c55e',
+                  borderRadius: '50%'
+                }} />
+                <span style={{ fontWeight: '600', color: '#1f2937' }}>
+                  {address?.slice(0, 6)}...{address?.slice(-4)}
+                </span>
+                <button
+                  onClick={() => disconnect()}
+                  style={{
+                    padding: '6px 12px',
+                    background: '#f3f4f6',
+                    color: '#6b7280',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Disconnect
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Wallet Modal */}
@@ -709,6 +713,9 @@ export default function HabitTracker() {
           <p><strong>{isConnected ? 'Ready to check-in!' : 'Connect wallet to start'}</strong></p>
           <p>Each check-in costs 0.00001 ETH (~1 cent)</p>
           <p>Contract: {CONTRACT_ADDRESS}</p>
+          <p style={{ fontSize: '12px', color: '#22c55e', marginTop: '8px' }}>
+            ✅ Safe contract - Only stores check-in data on-chain
+          </p>
           {isConnected && (
             <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
               💾 Your habits are saved to your wallet: {address?.slice(0, 8)}...{address?.slice(-6)}
