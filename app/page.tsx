@@ -284,12 +284,28 @@ export default function HabitTracker() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: currentColor.bg, padding: '24px', transition: 'background 0.3s' }}>
-      <div className="container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div className="header" style={{ margin: 0 }}>
-            <h1 style={{ margin: 0, marginBottom: '4px' }}>Base Habit Tracker</h1>
-            <p style={{ margin: 0 }}>Track your daily habits on-chain</p>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: currentColor.bg, 
+      padding: '16px',
+      transition: 'background 0.3s' 
+    }}>
+      <div className="container" style={{ 
+        maxWidth: '1200px', 
+        margin: '0 auto',
+        padding: '0 8px'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '24px',
+          flexWrap: 'wrap',
+          gap: '16px'
+        }}>
+          <div className="header" style={{ margin: 0, minWidth: '200px' }}>
+            <h1 style={{ margin: 0, marginBottom: '4px', fontSize: 'clamp(24px, 5vw, 32px)' }}>Base Habit Tracker</h1>
+            <p style={{ margin: 0, fontSize: 'clamp(12px, 3vw, 14px)' }}>Track your daily habits on-chain</p>
           </div>
 
           <div>
@@ -801,7 +817,8 @@ export default function HabitTracker() {
             />
           )}
 
-          <div className="calendar">
+          <div style={{ overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
+            <div className="calendar" style={{ minWidth: '280px' }}>
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
               <div key={day} className="day-header">{day}</div>
             ))}
@@ -833,6 +850,7 @@ export default function HabitTracker() {
               );
             })}
           </div>
+        </div>
         </div>
 
         <div className="info-box">
@@ -1237,7 +1255,7 @@ function MonthStats({
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(3, 1fr)',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
       gap: '12px',
       marginBottom: '20px'
     }}>
