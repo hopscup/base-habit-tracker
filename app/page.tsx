@@ -162,12 +162,6 @@ export default function HabitTracker() {
     setViewMonth(today.getMonth());
   };
 
-  const goToToday = () => {
-    const today = new Date();
-    setViewYear(today.getFullYear());
-    setViewMonth(today.getMonth());
-  };
-
   const handleCheckIn = async (day: number) => {
     if (!isConnected) {
       alert('Please connect your wallet first!');
