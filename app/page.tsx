@@ -856,7 +856,6 @@ export default function HabitTracker() {
         <div className="info-box">
           <p><strong>{isConnected ? 'Ready to check-in!' : 'Connect wallet to start'}</strong></p>
           <p>Each check-in costs 0.00001 ETH (~1 cent)</p>
-          <p>Contract: {CONTRACT_ADDRESS}</p>
           <p style={{ fontSize: '12px', color: '#22c55e', marginTop: '8px' }}>
             ✅ Safe contract - Only stores check-in data on-chain
           </p>
@@ -865,6 +864,51 @@ export default function HabitTracker() {
               💾 Your habits are saved to your wallet: {address?.slice(0, 8)}...{address?.slice(-6)}
             </p>
           )}
+          <div style={{ 
+            marginTop: '16px', 
+            paddingTop: '16px', 
+            borderTop: '1px solid #e5e7eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            fontSize: '13px',
+            color: '#6b7280'
+          }}>
+            <span>Built by</span>
+            <a 
+              href="https://x.com/hopscup" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: currentColor.button,
+                textDecoration: 'none',
+                fontWeight: '600',
+                transition: 'opacity 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = '0.7'}
+              onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+            >
+              <span style={{
+                width: '20px',
+                height: '20px',
+                background: currentColor.button,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: 'white'
+              }}>
+                H
+              </span>
+              hopscup
+            </a>
+          </div>
         </div>
       </div>
     </div>
