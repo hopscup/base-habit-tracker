@@ -1228,69 +1228,11 @@ function MonthStats({
   daysInMonth: number;
   currentColor: { bg: string; border: string; button: string; name: string };
 }) {
-  const [checkedDays, setCheckedDays] = useState<boolean[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    const fetchMonthData = async () => {
-      if (!address) return;
-      
-      setLoading(true);
-      const checks: boolean[] = [];
-      
-      for (let day = 1; day <= daysInMonth; day++) {
-        const timestamp = Math.floor(new Date(year, month, day).getTime() / 1000 / 86400);
-        try {
-          const response = await fetch(
-            `https://base.blockscout.com/api/v2/smart-contracts/${CONTRACT_ADDRESS}/methods-read?method_id=hasCheckedIn`
-          );
-          // This is a simplified version - you'd need to actually call the contract
-          checks.push(false); // Placeholder
-        } catch {
-          checks.push(false);
-        }
-      }
-      
-      setCheckedDays(checks);
-      setLoading(false);
-    };
-    
-    fetchMonthData();
-  }, [address, habitId, year, month, daysInMonth]);
-  
-  const totalChecked = checkedDays.filter(Boolean).length;
-  const percentage = daysInMonth > 0 ? Math.round((totalChecked / daysInMonth) * 100) : 0;
-  
-  // Calculate current streak
-  let currentStreak = 0;
-  const today = new Date();
-  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
-  
-  if (isCurrentMonth) {
-    const currentDay = today.getDate();
-    for (let i = currentDay - 1; i >= 0; i--) {
-      if (checkedDays[i]) {
-        currentStreak++;
-      } else {
-        break;
-      }
-    }
-  }
-  
-  if (loading) {
-    return (
-      <div style={{
-        padding: '16px',
-        background: currentColor.bg,
-        borderRadius: '12px',
-        marginBottom: '20px',
-        textAlign: 'center',
-        color: '#6b7280'
-      }}>
-        Loading stats...
-      </div>
-    );
-  }
+  // For now, show 0 stats - will be updated in real-time by contract reads
+  // This is a placeholder until we implement proper contract reading
+  const totalChecked = 0;
+  const percentage = 0;
+  const currentStreak = 0;
   
   return (
     <div style={{
