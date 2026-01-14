@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Base Habit Tracker",
     description: "Track your daily habits on-chain with Base",
     other: {
-      "base:app_id": "6067c08f4991800ac0d962f8",
+      "base:app_id": "6967c08f4991800a6d9d62f8",
       "fc:frame": JSON.stringify({
         version: minikitConfig.miniapp.version,
         imageUrl: minikitConfig.miniapp.heroImageUrl,
