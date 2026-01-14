@@ -65,14 +65,14 @@ body {
 .calendar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  gap: 10px; /* было 6px, увеличиваем */
   margin-top: 20px;
 }
 
 /* Адаптивные размеры для ячеек */
 @media (min-width: 768px) {
   .calendar {
-    gap: 10px;
+    gap: 14px; /* было 10px, увеличиваем для десктопа */
   }
 }
 
@@ -91,9 +91,9 @@ body {
 }
 
 .day-cell {
-  padding: 6px;
+  padding: 10px; /* было 6px, увеличиваем */
   border: 2px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 10px; /* было 8px */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -101,14 +101,14 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
-  height: 65px; /* фиксированная высота вместо aspect-ratio */
+  height: 70px; /* было 65px */
   background: white;
 }
 
 @media (min-width: 768px) {
   .day-cell {
-    padding: 10px;
-    height: 85px; /* больше на десктопе */
+    padding: 12px; /* было 10px */
+    height: 90px; /* было 85px */
     border-radius: 12px;
   }
 }
