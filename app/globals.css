@@ -91,7 +91,6 @@ body {
 }
 
 .day-cell {
-  aspect-ratio: 1;
   padding: 6px;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
@@ -102,14 +101,14 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
-  min-height: 50px;
+  height: 65px; /* фиксированная высота вместо aspect-ratio */
   background: white;
 }
 
 @media (min-width: 768px) {
   .day-cell {
     padding: 10px;
-    min-height: 70px;
+    height: 85px; /* больше на десктопе */
     border-radius: 12px;
   }
 }
