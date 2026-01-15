@@ -182,7 +182,7 @@ export default function HabitTracker() {
   useEffect(() => {
     if (address && contractHabits) {
       const loadedHabits: Habit[] = contractHabits
-        .map((habit: any, index: number) => ({
+        .map((habit: { name: string; colorIndex: bigint; exists: boolean }, index: number) => ({
           id: index,
           name: habit.name || '',
           colorIndex: Number(habit.colorIndex || 0),
@@ -276,13 +276,15 @@ export default function HabitTracker() {
         setTxMessage('');
       }, 3000);
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Check-in error:', error);
       setTxStatus('error');
       
-      if (error.message?.includes('Already checked in')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('Already checked in')) {
         setTxMessage('❌ Already checked in for this day!');
-      } else if (error.message?.includes('rejected')) {
+      } else if (errorMessage.includes('rejected')) {
         setTxMessage('❌ Transaction cancelled');
       } else {
         setTxMessage('❌ Transaction failed. Please try again.');
@@ -329,11 +331,13 @@ export default function HabitTracker() {
         setTxMessage('');
       }, 3000);
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Create habit error:', error);
       setTxStatus('error');
       
-      if (error.message?.includes('rejected')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('rejected')) {
         setTxMessage('❌ Transaction cancelled');
       } else {
         setTxMessage('❌ Failed to create habit');
@@ -385,11 +389,13 @@ export default function HabitTracker() {
         setTxMessage('');
       }, 3000);
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Update habit error:', error);
       setTxStatus('error');
       
-      if (error.message?.includes('rejected')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('rejected')) {
         setTxMessage('❌ Transaction cancelled');
       } else {
         setTxMessage('❌ Failed to update habit');
@@ -441,11 +447,13 @@ export default function HabitTracker() {
         setTxMessage('');
       }, 3000);
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Delete habit error:', error);
       setTxStatus('error');
       
-      if (error.message?.includes('rejected')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('rejected')) {
         setTxMessage('❌ Transaction cancelled');
       } else {
         setTxMessage('❌ Failed to delete habit');
