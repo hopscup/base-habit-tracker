@@ -4,47 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
-import Image from 'next/image';
 
-// НОВЫЙ АДРЕС КОНТРАКТА V2
-const CONTRACT_ADDRESS = '0xd063d6D758815ab813915771D44f5FcF6EA3E927';
+const CONTRACT_ADDRESS = '0x9a4eaaBd5d204932E1e4d9EC0fa718Dc77B3360e';
 
-// ОБНОВЛЕННЫЙ ABI для контракта V2
 const CONTRACT_ABI = [
-  // Создание привычки
-  {
-    inputs: [
-      { name: 'name', type: 'string' },
-      { name: 'colorIndex', type: 'uint256' }
-    ],
-    name: 'createHabit',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function'
-  },
-  // Обновление привычки
-  {
-    inputs: [
-      { name: 'habitId', type: 'uint256' },
-      { name: 'name', type: 'string' },
-      { name: 'colorIndex', type: 'uint256' }
-    ],
-    name: 'updateHabit',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function'
-  },
-  // Удаление привычки
-  {
-    inputs: [
-      { name: 'habitId', type: 'uint256' }
-    ],
-    name: 'deleteHabit',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function'
-  },
-  // Check-in (платный)
   {
     inputs: [
       { name: 'habitId', type: 'uint256' },
@@ -55,42 +18,6 @@ const CONTRACT_ABI = [
     stateMutability: 'payable',
     type: 'function'
   },
-  // Получить привычку
-  {
-    inputs: [
-      { name: 'user', type: 'address' },
-      { name: 'habitId', type: 'uint256' }
-    ],
-    name: 'getHabit',
-    outputs: [
-      { name: 'name', type: 'string' },
-      { name: 'colorIndex', type: 'uint256' },
-      { name: 'exists', type: 'bool' }
-    ],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  // Получить все привычки
-  {
-    inputs: [
-      { name: 'user', type: 'address' }
-    ],
-    name: 'getAllHabits',
-    outputs: [
-      {
-        components: [
-          { name: 'name', type: 'string' },
-          { name: 'colorIndex', type: 'uint256' },
-          { name: 'exists', type: 'bool' }
-        ],
-        name: '',
-        type: 'tuple[]'
-      }
-    ],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  // Проверка check-in
   {
     inputs: [
       { name: 'user', type: 'address' },
@@ -99,24 +26,6 @@ const CONTRACT_ABI = [
     ],
     name: 'hasCheckedIn',
     outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  // Счетчик привычек пользователя
-  {
-    inputs: [
-      { name: 'user', type: 'address' }
-    ],
-    name: 'userHabitCount',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  // Цена check-in
-  {
-    inputs: [],
-    name: 'checkInPrice',
-    outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function'
   }
@@ -137,13 +46,46 @@ interface Habit {
   id: number;
   name: string;
   colorIndex: number;
-  exists: boolean;
 }
+
+// Helper functions for wallet-bound storage
+const getStorageKey = (address: string | undefined) => {
+  if (!address) return null;
+  return `habits_${address.toLowerCase()}`;
+};
+
+const loadHabitsForWallet = (address: string | undefined): Habit[] => {
+  if (typeof window === 'undefined' || !address) {
+    return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
+  }
+  
+  const key = getStorageKey(address);
+  if (!key) return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
+  
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
+    }
+  }
+  return [{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }];
+};
+
+const saveHabitsForWallet = (address: string | undefined, habits: Habit[]) => {
+  if (typeof window === 'undefined' || !address) return;
+  
+  const key = getStorageKey(address);
+  if (!key) return;
+  
+  localStorage.setItem(key, JSON.stringify(habits));
+};
 
 export default function HabitTracker() {
   const { address, isConnected } = useAccount();
   
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }]);
   const [currentHabitIndex, setCurrentHabitIndex] = useState(0);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showAddHabitModal, setShowAddHabitModal] = useState(false);
@@ -168,44 +110,25 @@ export default function HabitTracker() {
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
   
-  // Читаем привычки из контракта
-  const { data: contractHabits, refetch: refetchHabits } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'getAllHabits',
-    args: address ? [address as `0x${string}`] : undefined,
-    query: {
-      enabled: !!address
-    }
-  });
-
-  // Загружаем привычки при подключении кошелька
   useEffect(() => {
-    if (address && contractHabits) {
-      const loadedHabits: Habit[] = contractHabits
-        .map((habit: { name: string; colorIndex: bigint; exists: boolean }, index: number) => ({
-          id: index,
-          name: habit.name || '',
-          colorIndex: Number(habit.colorIndex || 0),
-          exists: habit.exists || false
-        }))
-        .filter((habit: Habit) => habit.exists && habit.name.trim() !== '');
-      
-      if (loadedHabits.length === 0) {
-        // Если нет привычек, показываем placeholder
-        setHabits([{ id: 0, name: 'Connect wallet to start', colorIndex: 0, exists: false }]);
-      } else {
-        setHabits(loadedHabits);
-      }
+    if (address) {
+      const loadedHabits = loadHabitsForWallet(address);
+      setHabits(loadedHabits);
       setCurrentHabitIndex(0);
-    } else if (!isConnected) {
-      setHabits([{ id: 0, name: 'Daily Check-in App', colorIndex: 0, exists: false }]);
+    } else {
+      setHabits([{ id: 0, name: 'Daily Check-in App', colorIndex: 0 }]);
       setCurrentHabitIndex(0);
     }
-  }, [address, contractHabits, isConnected]);
+  }, [address]);
   
-  const currentHabit = habits[currentHabitIndex] || habits[0];
-  const currentColor = HABIT_COLORS[currentHabit?.colorIndex || 0];
+  useEffect(() => {
+    if (address && habits.length > 0) {
+      saveHabitsForWallet(address, habits);
+    }
+  }, [habits, address]);
+  
+  const currentHabit = habits[currentHabitIndex];
+  const currentColor = HABIT_COLORS[currentHabit.colorIndex];
   
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayOfMonth = new Date(viewYear, viewMonth, 1).getDay();
@@ -249,11 +172,6 @@ export default function HabitTracker() {
       return;
     }
 
-    if (!currentHabit.exists) {
-      alert('Please create a habit first!');
-      return;
-    }
-
     try {
       setTxStatus('pending');
       setTxMessage('Processing transaction...');
@@ -272,6 +190,7 @@ export default function HabitTracker() {
       setTxStatus('success');
       setTxMessage('✅ Check-in successful!');
       
+      // Hide success message after 3 seconds
       setTimeout(() => {
         setTxStatus('idle');
         setTxMessage('');
@@ -280,17 +199,9 @@ export default function HabitTracker() {
     } catch (error) {
       console.error('Check-in error:', error);
       setTxStatus('error');
+      setTxMessage('❌ Transaction failed. Please try again.');
       
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      if (errorMessage.includes('Already checked in')) {
-        setTxMessage('❌ Already checked in for this day!');
-      } else if (errorMessage.includes('rejected')) {
-        setTxMessage('❌ Transaction cancelled');
-      } else {
-        setTxMessage('❌ Transaction failed. Please try again.');
-      }
-      
+      // Hide error message after 5 seconds
       setTimeout(() => {
         setTxStatus('idle');
         setTxMessage('');
@@ -298,57 +209,24 @@ export default function HabitTracker() {
     }
   };
 
-  const addNewHabit = async () => {
+  const addNewHabit = () => {
     if (!newHabitName.trim()) return;
     if (!isConnected) {
       alert('Please connect your wallet to add habits!');
       return;
     }
     
-    try {
-      setTxStatus('pending');
-      setTxMessage('Creating habit...');
-      
-      await writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: CONTRACT_ABI,
-        functionName: 'createHabit',
-        args: [newHabitName.trim(), BigInt(selectedColorIndex)],
-        chainId: base.id
-      });
-      
-      setTxStatus('success');
-      setTxMessage('✅ Habit created!');
-      
-      // Обновляем список привычек
-      await refetchHabits();
-      
-      setShowAddHabitModal(false);
-      setNewHabitName('');
-      setSelectedColorIndex(0);
-      
-      setTimeout(() => {
-        setTxStatus('idle');
-        setTxMessage('');
-      }, 3000);
-      
-    } catch (error) {
-      console.error('Create habit error:', error);
-      setTxStatus('error');
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      if (errorMessage.includes('rejected')) {
-        setTxMessage('❌ Transaction cancelled');
-      } else {
-        setTxMessage('❌ Failed to create habit');
-      }
-      
-      setTimeout(() => {
-        setTxStatus('idle');
-        setTxMessage('');
-      }, 5000);
-    }
+    const newHabit: Habit = {
+      id: habits.length,
+      name: newHabitName.trim(),
+      colorIndex: selectedColorIndex
+    };
+    
+    setHabits([...habits, newHabit]);
+    setCurrentHabitIndex(habits.length);
+    setShowAddHabitModal(false);
+    setNewHabitName('');
+    setSelectedColorIndex(0);
   };
 
   const openEditHabit = (habit: Habit) => {
@@ -359,112 +237,44 @@ export default function HabitTracker() {
     setOpenDropdownId(null);
   };
 
-  const saveEditHabit = async () => {
+  const saveEditHabit = () => {
     if (!newHabitName.trim() || editingHabitId === null) return;
     
-    try {
-      setTxStatus('pending');
-      setTxMessage('Updating habit...');
-      
-      await writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: CONTRACT_ABI,
-        functionName: 'updateHabit',
-        args: [BigInt(editingHabitId), newHabitName.trim(), BigInt(selectedColorIndex)],
-        chainId: base.id
-      });
-      
-      setTxStatus('success');
-      setTxMessage('✅ Habit updated!');
-      
-      // Обновляем список привычек
-      await refetchHabits();
-      
-      setShowEditHabitModal(false);
-      setNewHabitName('');
-      setSelectedColorIndex(0);
-      setEditingHabitId(null);
-      
-      setTimeout(() => {
-        setTxStatus('idle');
-        setTxMessage('');
-      }, 3000);
-      
-    } catch (error) {
-      console.error('Update habit error:', error);
-      setTxStatus('error');
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      if (errorMessage.includes('rejected')) {
-        setTxMessage('❌ Transaction cancelled');
-      } else {
-        setTxMessage('❌ Failed to update habit');
-      }
-      
-      setTimeout(() => {
-        setTxStatus('idle');
-        setTxMessage('');
-      }, 5000);
-    }
+    const updatedHabits = habits.map(h => 
+      h.id === editingHabitId 
+        ? { ...h, name: newHabitName.trim(), colorIndex: selectedColorIndex }
+        : h
+    );
+    
+    setHabits(updatedHabits);
+    setShowEditHabitModal(false);
+    setNewHabitName('');
+    setSelectedColorIndex(0);
+    setEditingHabitId(null);
   };
 
   const confirmDeleteHabit = (habitId: number) => {
+    if (habits.length === 1) {
+      alert('You must have at least one habit!');
+      return;
+    }
     setDeletingHabitId(habitId);
     setShowDeleteConfirmModal(true);
     setOpenDropdownId(null);
   };
 
-  const deleteHabit = async () => {
+  const deleteHabit = () => {
     if (deletingHabitId === null) return;
     
-    try {
-      setTxStatus('pending');
-      setTxMessage('Deleting habit...');
-      
-      await writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: CONTRACT_ABI,
-        functionName: 'deleteHabit',
-        args: [BigInt(deletingHabitId)],
-        chainId: base.id
-      });
-      
-      setTxStatus('success');
-      setTxMessage('✅ Habit deleted!');
-      
-      // Обновляем список привычек
-      await refetchHabits();
-      
-      if (currentHabitIndex >= habits.length - 1) {
-        setCurrentHabitIndex(Math.max(0, habits.length - 2));
-      }
-      
-      setShowDeleteConfirmModal(false);
-      setDeletingHabitId(null);
-      
-      setTimeout(() => {
-        setTxStatus('idle');
-        setTxMessage('');
-      }, 3000);
-      
-    } catch (error) {
-      console.error('Delete habit error:', error);
-      setTxStatus('error');
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      if (errorMessage.includes('rejected')) {
-        setTxMessage('❌ Transaction cancelled');
-      } else {
-        setTxMessage('❌ Failed to delete habit');
-      }
-      
-      setTimeout(() => {
-        setTxStatus('idle');
-        setTxMessage('');
-      }, 5000);
+    const filteredHabits = habits.filter(h => h.id !== deletingHabitId);
+    setHabits(filteredHabits);
+    
+    if (currentHabitIndex >= filteredHabits.length) {
+      setCurrentHabitIndex(filteredHabits.length - 1);
     }
+    
+    setShowDeleteConfirmModal(false);
+    setDeletingHabitId(null);
   };
 
   const getDaysArray = () => {
@@ -686,12 +496,12 @@ export default function HabitTracker() {
                       }}
                     >
                       {iconPath ? (
-                        <Image 
+                        <img 
                           src={iconPath} 
                           alt={connector.name}
-                          width={40}
-                          height={40}
                           style={{ 
+                            width: '40px', 
+                            height: '40px', 
                             borderRadius: '8px',
                             objectFit: 'contain'
                           }}
@@ -943,34 +753,20 @@ export default function HabitTracker() {
         `}</style>
 
         <div className="habit-tabs" style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', overflow: 'visible' }}>
-          {isConnected && habits.length > 0 && habits.some(h => h.exists) ? (
-            habits.filter(h => h.exists).map((habit, index) => (
-              <HabitTab
-                key={habit.id}
-                habit={habit}
-                isActive={index === currentHabitIndex}
-                isConnected={isConnected}
-                currentColor={HABIT_COLORS[habit.colorIndex]}
-                onClick={() => setCurrentHabitIndex(index)}
-                onEdit={() => openEditHabit(habit)}
-                onDelete={() => confirmDeleteHabit(habit.id)}
-                isDropdownOpen={openDropdownId === habit.id}
-                setIsDropdownOpen={(isOpen) => setOpenDropdownId(isOpen ? habit.id : null)}
-              />
-            ))
-          ) : !isConnected ? (
-            <div style={{
-              padding: '12px 24px',
-              background: 'white',
-              border: '2px solid #e5e7eb',
-              borderRadius: '12px',
-              fontSize: '15px',
-              fontWeight: '600',
-              color: '#6b7280'
-            }}>
-              Connect wallet to view habits
-            </div>
-          ) : null}
+          {habits.map((habit, index) => (
+            <HabitTab
+              key={habit.id}
+              habit={habit}
+              isActive={index === currentHabitIndex}
+              isConnected={isConnected}
+              currentColor={HABIT_COLORS[habit.colorIndex]}
+              onClick={() => setCurrentHabitIndex(index)}
+              onEdit={() => openEditHabit(habit)}
+              onDelete={() => confirmDeleteHabit(habit.id)}
+              isDropdownOpen={openDropdownId === habit.id}
+              setIsDropdownOpen={(isOpen) => setOpenDropdownId(isOpen ? habit.id : null)}
+            />
+          ))}
           
           {isConnected && (
             <button 
@@ -1006,7 +802,7 @@ export default function HabitTracker() {
           className="habit-card"
           style={{ borderColor: currentColor.border }}
         >
-          <h2>{currentHabit?.name || 'No habits yet'}</h2>
+          <h2>{currentHabit.name}</h2>
           
           <div style={{ 
             display: 'flex', 
@@ -1094,7 +890,7 @@ export default function HabitTracker() {
             </button>
           </div>
           
-          {isConnected && currentHabit?.exists && (
+          {isConnected && (
             <MonthStats
               habitId={currentHabit.id}
               address={address}
@@ -1127,14 +923,13 @@ export default function HabitTracker() {
                   day={day}
                   isToday={isToday}
                   isPast={isPast}
-                  habitId={currentHabit?.id || 0}
+                  habitId={currentHabit.id}
                   address={address}
                   dateTimestamp={getDateTimestamp(day)}
                   onCheckIn={() => handleCheckIn(day)}
                   isPending={isPending}
                   currentColor={currentColor}
                   isConnected={isConnected}
-                  habitExists={currentHabit?.exists || false}
                 />
               );
             })}
@@ -1146,11 +941,11 @@ export default function HabitTracker() {
           <p><strong>{isConnected ? 'Ready to check-in!' : 'Connect wallet to start'}</strong></p>
           <p>Each check-in costs 0.00001 ETH (~1 cent)</p>
           <p style={{ fontSize: '12px', color: '#22c55e', marginTop: '8px' }}>
-            ✅ Your data syncs across all devices via blockchain!
+            ✅ Safe contract - Only stores check-in data on-chain
           </p>
           {isConnected && (
             <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
-              💾 Connected: {address?.slice(0, 8)}...{address?.slice(-6)}
+              💾 Your habits are saved to your wallet: {address?.slice(0, 8)}...{address?.slice(-6)}
             </p>
           )}
           <div style={{ 
@@ -1565,11 +1360,11 @@ function HabitForm({
 }
 
 function MonthStats({
-  habitId,
-  address,
-  year,
-  month,
-  daysInMonth,
+  habitId: _habitId,
+  address: _address,
+  year: _year,
+  month: _month,
+  daysInMonth: _daysInMonth,
   currentColor
 }: {
   habitId: number;
@@ -1579,43 +1374,11 @@ function MonthStats({
   daysInMonth: number;
   currentColor: { bg: string; border: string; button: string; name: string };
 }) {
-  const [stats, setStats] = useState({ totalChecked: 0, percentage: 0, currentStreak: 0 });
-
-  // Подсчитываем статистику путем проверки каждого дня
-  useEffect(() => {
-    const calculateStats = async () => {
-      if (!address) return;
-      
-      let checked = 0;
-      let streak = 0;
-      let streakActive = true;
-      
-      const today = new Date();
-      const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
-      const lastDay = isCurrentMonth ? today.getDate() : daysInMonth;
-      
-      // Проверяем дни от сегодня назад для streak
-      for (let day = lastDay; day >= 1; day--) {
-        // Здесь нужно было бы сделать запрос к контракту
-        // Но для простоты пока оставляем 0
-        const isChecked = false; // await contract.hasCheckedIn(address, habitId, dateTimestamp)
-        
-        if (isChecked) {
-          checked++;
-          if (streakActive) streak++;
-        } else if (day <= lastDay) {
-          streakActive = false;
-        }
-      }
-      
-      const percentage = Math.round((checked / lastDay) * 100);
-      setStats({ totalChecked: checked, percentage, currentStreak: streak });
-    };
-    
-    calculateStats();
-  }, [address, habitId, year, month, daysInMonth]);
-  
-  const { totalChecked, percentage, currentStreak } = stats;
+  // For now, show 0 stats - will be updated in real-time by contract reads
+  // This is a placeholder until we implement proper contract reading
+  const totalChecked = 0;
+  const percentage = 0;
+  const currentStreak = 0;
   
   // Calculate achievements
   const achievements = [];
@@ -1731,8 +1494,7 @@ function DayCell({
   onCheckIn,
   isPending,
   currentColor,
-  isConnected,
-  habitExists
+  isConnected
 }: { 
   day: number;
   isToday: boolean;
@@ -1744,19 +1506,18 @@ function DayCell({
   isPending: boolean;
   currentColor: { bg: string; border: string; button: string; name: string };
   isConnected: boolean;
-  habitExists: boolean;
 }) {
   const { data: isChecked } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'hasCheckedIn',
-    args: address && habitExists ? [address as `0x${string}`, BigInt(habitId), BigInt(dateTimestamp)] : undefined,
+    args: address ? [address as `0x${string}`, BigInt(habitId), BigInt(dateTimestamp)] : undefined,
     query: {
-      enabled: !!address && habitExists
+      enabled: !!address
     }
   });
 
-  const canCheckIn = isToday && !isChecked && isConnected && !isPending && habitExists;
+  const canCheckIn = isToday && !isChecked && isConnected && !isPending;
 
   return (
     <div
