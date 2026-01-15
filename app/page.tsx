@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
+import Image from 'next/image';
 
 // НОВЫЙ АДРЕС КОНТРАКТА V2
 const CONTRACT_ADDRESS = '0xd063d6D758815ab813915771D44f5FcF6EA3E927';
@@ -685,12 +686,12 @@ export default function HabitTracker() {
                       }}
                     >
                       {iconPath ? (
-                        <img 
+                        <Image 
                           src={iconPath} 
                           alt={connector.name}
+                          width={40}
+                          height={40}
                           style={{ 
-                            width: '40px', 
-                            height: '40px', 
                             borderRadius: '8px',
                             objectFit: 'contain'
                           }}
@@ -1595,8 +1596,6 @@ function MonthStats({
       
       // Проверяем дни от сегодня назад для streak
       for (let day = lastDay; day >= 1; day--) {
-        const dateTimestamp = Math.floor(new Date(year, month, day).getTime() / 1000 / 86400);
-        
         // Здесь нужно было бы сделать запрос к контракту
         // Но для простоты пока оставляем 0
         const isChecked = false; // await contract.hasCheckedIn(address, habitId, dateTimestamp)
