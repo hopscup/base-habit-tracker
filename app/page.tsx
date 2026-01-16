@@ -1359,12 +1359,14 @@ function HabitForm({
   );
 }
 
+// Замените функцию MonthStats на эту версию:
+
 function MonthStats({
-  habitId: _habitId,
-  address: _address,
-  year: _year,
-  month: _month,
-  daysInMonth: _daysInMonth,
+  habitId,
+  address,
+  year,
+  month,
+  daysInMonth,
   currentColor
 }: {
   habitId: number;
@@ -1374,11 +1376,59 @@ function MonthStats({
   daysInMonth: number;
   currentColor: { bg: string; border: string; button: string; name: string };
 }) {
-  // For now, show 0 stats - will be updated in real-time by contract reads
-  // This is a placeholder until we implement proper contract reading
-  const totalChecked = 0;
-  const percentage = 0;
-  const currentStreak = 0;
+  const [stats, setStats] = useState({ totalChecked: 0, percentage: 0, currentStreak: 0 });
+
+  // Get today's date for comparison
+  const today = new Date();
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
+  const lastDay = isCurrentMonth ? today.getDate() : daysInMonth;
+
+  // Build array of all days to check
+  const daysToCheck = Array.from({ length: lastDay }, (_, i) => i + 1);
+
+  // Create queries for each day
+  const dayQueries = daysToCheck.map(day => {
+    const dateTimestamp = Math.floor(new Date(year, month, day).getTime() / 1000 / 86400);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return useReadContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'hasCheckedIn',
+      args: address ? [address as `0x${string}`, BigInt(habitId), BigInt(dateTimestamp)] : undefined,
+      query: {
+        enabled: !!address
+      }
+    });
+  });
+
+  // Calculate stats when data changes
+  useEffect(() => {
+    if (!address) return;
+
+    let checked = 0;
+    let streak = 0;
+    let streakActive = true;
+
+    // Count checked days and calculate streak (from most recent backwards)
+    for (let i = dayQueries.length - 1; i >= 0; i--) {
+      const isChecked = dayQueries[i].data;
+      
+      if (isChecked) {
+        checked++;
+        if (streakActive) {
+          streak++;
+        }
+      } else if (i < dayQueries.length - 1) {
+        // Only break streak if it's not today (allow skipping today)
+        streakActive = false;
+      }
+    }
+
+    const percentage = lastDay > 0 ? Math.round((checked / lastDay) * 100) : 0;
+    setStats({ totalChecked: checked, percentage, currentStreak: streak });
+  }, [dayQueries.map(q => q.data).join(','), address, lastDay]);
+
+  const { totalChecked, percentage, currentStreak } = stats;
   
   // Calculate achievements
   const achievements = [];
@@ -1437,6 +1487,52 @@ function MonthStats({
           </div>
         </div>
       </div>
+      
+      {achievements.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+          border: '2px solid #fcd34d',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '20px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '8px',
+          alignItems: 'center'
+        }}>
+          <span style={{ 
+            fontSize: '14px', 
+            fontWeight: '700', 
+            color: '#78350f',
+            marginRight: '8px'
+          }}>
+            🎉 Achievements:
+          </span>
+          {achievements.map((achievement, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                background: 'white',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: achievement.color,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>{achievement.icon}</span>
+              {achievement.name}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
       
       {achievements.length > 0 && (
         <div style={{
