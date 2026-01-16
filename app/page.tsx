@@ -327,7 +327,7 @@ export default function HabitTracker() {
           flexWrap: 'wrap',
           gap: '16px'
         }}>
-          <div className="header" style={{ margin: 0, minWidth: '200px' }}>
+          <div className="header" style={{ margin: 0, minWidth: '200px', padding: 0 }}>
             <h1 style={{ margin: 0, marginBottom: '4px', fontSize: 'clamp(24px, 5vw, 32px)' }}>Base Habit Tracker</h1>
             <p style={{ margin: 0, fontSize: 'clamp(12px, 3vw, 14px)' }}>Track your daily habits on-chain</p>
           </div>
