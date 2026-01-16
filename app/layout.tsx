@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Base Habit Tracker",
   description: "Track your daily habits on-chain with Base",
   other: {
-    'base:app_id': '69692f528b0e0e7315e206f5',
+    'base:app_id': '6967c08f4991800a6d9d62f8',
     "fc:frame": JSON.stringify({
       version: minikitConfig.miniapp.version,
       imageUrl: minikitConfig.miniapp.heroImageUrl,
