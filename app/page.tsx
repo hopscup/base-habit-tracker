@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { sdk } from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
 import Image from 'next/image';
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 
 const CONTRACT_ADDRESS = '0x9a4eaaBd5d204932E1e4d9EC0fa718Dc77B3360e';
 
@@ -111,12 +111,15 @@ export default function HabitTracker() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
-
+  
+  // MiniKit - ВАЖНО: вызываем setFrameReady чтобы убрать splash screen
+  const { setFrameReady, isFrameReady } = useMiniKit();
+  
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      sdk.actions.ready();
+    if (!isFrameReady) {
+      setFrameReady();
     }
-  }, []);
+  }, [setFrameReady, isFrameReady]);
 
   useEffect(() => {
     if (address) {
