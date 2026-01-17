@@ -8,6 +8,17 @@ import { RootProvider } from "./rootProvider";
 export const metadata: Metadata = {
   title: "Base Habit Tracker",
   description: "Track your daily habits on-chain with Base",
+  applicationName: "Base Habit Tracker",
+appleWebApp: {
+  capable: true,
+  title: "Base Habit Tracker",
+  statusBarStyle: "default",
+},
+openGraph: {
+  title: "Base Habit Tracker",
+  description: "Track your daily habits on-chain with Base",
+  images: ['/blue-hero.png'],
+},
   other: {
     'base:app_id': '6967c08f4991800a6d9d62f8',
     "fc:frame": JSON.stringify({
