@@ -1608,4 +1608,3 @@ function DayCell({
       {isChecked && <div className="checkmark">✓</div>}
     </div>
   );
-}
