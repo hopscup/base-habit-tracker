@@ -1582,7 +1582,8 @@ function DayCell({
     functionName: 'hasCheckedIn',
     args: address ? [address as `0x${string}`, BigInt(habitId), BigInt(dateTimestamp)] : undefined,
     query: {
-      enabled: !!address
+      enabled: !!address,
+      refetchInterval: 3000
     }
   });
 
