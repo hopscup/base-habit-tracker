@@ -14,7 +14,9 @@ export function RootProvider({ children }: { children: ReactNode }) {
           mode: "auto",
         },
       }}
-      projectId={process.env.NEXT_PUBLIC_CDP_PROJECT_ID}
+      miniKit={{
+        enabled: true,
+      }}
     >
       {children}
     </OnchainKitProvider>
