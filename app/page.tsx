@@ -1282,14 +1282,17 @@ function HabitForm({
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(4, 1fr)', 
-          gap: '12px' 
+        gap: '8px',
+maxHeight: '300px',
+overflowY: 'auto',
+padding: '4px' 
         }}>
           {HABIT_COLORS.map((color, index) => (
             <button
               key={index}
               onClick={() => setSelectedColorIndex(index)}
               style={{
-                padding: '16px',
+                padding: '12px 8px',
                 background: color.bg,
                 border: selectedColorIndex === index ? `3px solid ${color.button}` : '2px solid #e5e7eb',
                 borderRadius: '12px',
