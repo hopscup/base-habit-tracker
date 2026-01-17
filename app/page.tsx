@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { sdk } from '@coinbase/onchainkit/minikit';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { sdk } from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
+import Image from 'next/image';
 
 const CONTRACT_ADDRESS = '0x9a4eaaBd5d204932E1e4d9EC0fa718Dc77B3360e';
 
@@ -503,12 +504,12 @@ export default function HabitTracker() {
                       }}
                     >
                       {iconPath ? (
-                        <img 
+                        <Image 
                           src={iconPath} 
                           alt={connector.name}
+                          width={40}
+                          height={40}
                           style={{ 
-                            width: '40px', 
-                            height: '40px', 
                             borderRadius: '8px',
                             objectFit: 'contain'
                           }}
@@ -1409,6 +1410,13 @@ function MonthStats({
     });
   });
 
+  // Extract dependency to a stable value
+  const dayQueriesData = useMemo(
+    () => dayQueries.map(q => q.data),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dayQueries.map(q => q.data).join(',')]
+  );
+
   // Calculate stats when data changes
   useEffect(() => {
     if (!address) return;
@@ -1418,15 +1426,15 @@ function MonthStats({
     let streakActive = true;
 
     // Count checked days and calculate streak (from most recent backwards)
-    for (let i = dayQueries.length - 1; i >= 0; i--) {
-      const isChecked = dayQueries[i].data;
+    for (let i = dayQueriesData.length - 1; i >= 0; i--) {
+      const isChecked = dayQueriesData[i];
       
       if (isChecked) {
         checked++;
         if (streakActive) {
           streak++;
         }
-      } else if (i < dayQueries.length - 1) {
+      } else if (i < dayQueriesData.length - 1) {
         // Only break streak if it's not today (allow skipping today)
         streakActive = false;
       }
@@ -1434,7 +1442,7 @@ function MonthStats({
 
     const percentage = lastDay > 0 ? Math.round((checked / lastDay) * 100) : 0;
     setStats({ totalChecked: checked, percentage, currentStreak: streak });
-  }, [dayQueries.map(q => q.data).join(','), address, lastDay]);
+  }, [dayQueriesData, address, lastDay]);
 
   const { totalChecked, percentage, currentStreak } = stats;
   
