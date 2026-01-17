@@ -25,7 +25,7 @@ openGraph: {
       version: minikitConfig.miniapp.version,
       imageUrl: minikitConfig.miniapp.heroImageUrl,
       button: {
-        title: `Join the ${minikitConfig.miniapp.name} Waitlist`,
+        title: "Launch Habit Tracker",
         action: {
           name: `Launch ${minikitConfig.miniapp.name}`,
           type: "launch_frame",
