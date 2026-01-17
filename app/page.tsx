@@ -111,14 +111,12 @@ export default function HabitTracker() {
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
 
-useEffect(() => {
-  if (typeof window !== 'undefined') {
-    sdk.actions.ready();
-  }
-}, []);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sdk.actions.ready();
+    }
+  }, []);
 
-useEffect(() => {
-  if (address) {
   useEffect(() => {
     if (address) {
       const loadedHabits = loadHabitsForWallet(address);
@@ -1371,10 +1369,6 @@ padding: '4px'
   );
 }
 
-// Замените функцию MonthStats на эту версию:
-
-// Замените функцию MonthStats на эту версию:
-
 function MonthStats({
   habitId,
   address,
@@ -1608,3 +1602,4 @@ function DayCell({
       {isChecked && <div className="checkmark">✓</div>}
     </div>
   );
+}
