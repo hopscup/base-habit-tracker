@@ -110,7 +110,6 @@ export default function HabitTracker() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
-  const { writeContract, isPending } = useWriteContract();
 
 useEffect(() => {
   if (typeof window !== 'undefined') {
