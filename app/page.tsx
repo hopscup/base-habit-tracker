@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { sdk } from '@coinbase/onchainkit/minikit';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
@@ -109,7 +110,16 @@ export default function HabitTracker() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
-  
+  const { writeContract, isPending } = useWriteContract();
+
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    sdk.actions.ready();
+  }
+}, []);
+
+useEffect(() => {
+  if (address) {
   useEffect(() => {
     if (address) {
       const loadedHabits = loadHabitsForWallet(address);
