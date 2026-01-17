@@ -27,9 +27,9 @@ export const minikitConfig = {
     primaryCategory: "productivity",
     tags: ["habits", "productivity", "blockchain", "base"],
     heroImageUrl: `${ROOT_URL}/blue-hero.png`, 
-    tagline: "",
+    tagline: "Build better habits on Base",
     ogTitle: "Base Habit Tracker",
-    ogDescription: "",
+    ogDescription: "Track your daily habits on-chain with Base",
     ogImageUrl: `${ROOT_URL}/blue-hero.png`,
   },
 } as const;
