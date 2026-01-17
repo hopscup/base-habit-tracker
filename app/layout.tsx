@@ -9,16 +9,16 @@ export const metadata: Metadata = {
   title: "Base Habit Tracker",
   description: "Track your daily habits on-chain with Base",
   applicationName: "Base Habit Tracker",
-appleWebApp: {
-  capable: true,
-  title: "Base Habit Tracker",
-  statusBarStyle: "default",
-},
-openGraph: {
-  title: "Base Habit Tracker",
-  description: "Track your daily habits on-chain with Base",
-  images: ['/blue-hero.png'],
-},
+  appleWebApp: {
+    capable: true,
+    title: "Base Habit Tracker",
+    statusBarStyle: "default",
+  },
+  openGraph: {
+    title: "Base Habit Tracker",
+    description: "Track your daily habits on-chain with Base",
+    images: ['/blue-hero.png'],
+  },
   other: {
     'base:app_id': '6967c08f4991800a6d9d62f8',
     "fc:frame": JSON.stringify({
@@ -51,12 +51,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <RootProvider>
-      <html lang="en">
-        <body className={`${inter.variable} ${sourceCodePro.variable}`}>
+    <html lang="en">
+      <body className={`${inter.variable} ${sourceCodePro.variable}`}>
+        <RootProvider>
           <SafeArea>{children}</SafeArea>
-        </body>
-      </html>
-    </RootProvider>
+        </RootProvider>
+      </body>
+    </html>
   );
 }
