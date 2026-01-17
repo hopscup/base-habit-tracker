@@ -1609,4 +1609,3 @@ function DayCell({
     </div>
   );
 }
-}
