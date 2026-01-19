@@ -1585,7 +1585,7 @@ function DayCell({
   currentColor: { bg: string; border: string; button: string; name: string };
   isConnected: boolean;
 }) {
-  const { data: isChecked } = useReadContract({
+  const { data: isChecked, error } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'hasCheckedIn',
@@ -1596,6 +1596,13 @@ function DayCell({
       staleTime: 0
     }
   });
+
+  // Debug logging - remove after fixing
+  useEffect(() => {
+    if (isToday && address) {
+      console.log(`[DayCell Debug] day=${day}, habitId=${habitId}, dateTimestamp=${dateTimestamp}, isChecked=${isChecked}, error=${error?.message}`);
+    }
+  }, [day, habitId, dateTimestamp, isChecked, error, isToday, address]);
 
   const canCheckIn = isToday && !isChecked && isConnected && !isPending;
 
