@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { parseEther } from 'viem';
