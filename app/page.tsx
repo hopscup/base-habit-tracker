@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { parseEther } from 'viem';
 import { base } from 'wagmi/chains';
 import Image from 'next/image';
@@ -111,6 +112,7 @@ export default function HabitTracker() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContract, isPending } = useWriteContract();
+  const queryClient = useQueryClient();
   
   // MiniKit - ВАЖНО: вызываем setFrameReady чтобы убрать splash screen
   const { setFrameReady, isFrameReady } = useMiniKit();
@@ -200,6 +202,11 @@ export default function HabitTracker() {
       
       setTxStatus('success');
       setTxMessage('✅ Check-in successful!');
+      
+      // Invalidate all contract read queries to refresh data
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['readContract'] });
+      }, 2000);
       
       // Hide success message after 3 seconds
       setTimeout(() => {
@@ -1408,7 +1415,9 @@ function MonthStats({
       functionName: 'hasCheckedIn',
       args: address ? [address as `0x${string}`, BigInt(habitId), BigInt(dateTimestamp)] : undefined,
       query: {
-        enabled: !!address
+        enabled: !!address,
+        refetchInterval: 5000,
+        staleTime: 0
       }
     });
   });
@@ -1583,7 +1592,8 @@ function DayCell({
     args: address ? [address as `0x${string}`, BigInt(habitId), BigInt(dateTimestamp)] : undefined,
     query: {
       enabled: !!address,
-      refetchInterval: 3000
+      refetchInterval: 3000,
+      staleTime: 0
     }
   });
 
